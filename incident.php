@@ -1,0 +1,532 @@
+<?php
+
+
+$pageTitle = 'Incident Priority Management';
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/admin-header.css">
+    <link rel="stylesheet" href="css/buttons.css">
+    <link rel="stylesheet" href="css/sidebar-footer.css">
+    <link rel="stylesheet" href="CSS/cards.css">
+    <link rel="stylesheet" href="css/incident.css">
+
+</head>
+<body>
+    <!-- Include Sidebar Component -->
+    <?php include 'includes/sidebar.php'; ?>
+
+    <!-- Include Admin Header Component -->
+    <?php include 'includes/admin-header.php'; ?>
+
+    <!-- ===================================
+       MAIN CONTENT - Incident Priority Management
+       =================================== -->
+    <div class="main-content">
+        <div class="main-container">
+
+            <h1 class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Incident Priority Management
+            </h1>
+
+            <!-- Statistics Cards -->
+            <div class="stats-cards">
+                <div class="stats-card">
+                    <div class="stats-icon high">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="stats-content">
+                        <h3>12</h3>
+                        <p>High Priority Incidents</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon medium">
+                        <i class="fas fa-ambulance"></i>
+                    </div>
+                    <div class="stats-content">
+                        <h3>8</h3>
+                        <p>Medium Priority Incidents</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon low">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="stats-content">
+                        <h3>15</h3>
+                        <p>Low Priority Incidents</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <h2 class="section-title" style="font-size: 1.2rem; margin-bottom: 1rem;">
+                    <i class="fas fa-filter"></i>
+                    Filter Incidents
+                </h2>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="priority-filter">Priority Level</label>
+                        <select id="priority-filter">
+                            <option value="">All Priorities</option>
+                            <option value="high">High Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="status-filter">Status</label>
+                        <select id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="dispatched">Dispatched</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="type-filter">Incident Type</label>
+                        <select id="type-filter">
+                            <option value="">All Types</option>
+                            <option value="medical">Medical Emergency</option>
+                            <option value="fire">Fire</option>
+                            <option value="police">Police Emergency</option>
+                            <option value="traffic">Traffic Accident</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="search">Search</label>
+                        <input type="text" id="search" placeholder="Search incidents...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logged Incidents (Dynamic) -->
+            <div class="priority-section" style="margin-top: 1.5rem;">
+                <h2 class="section-title" style="font-size: 1.2rem;">
+                    <i class="fas fa-list"></i>
+                    Logged Incidents
+                </h2>
+                <div id="incident-list-dynamic"></div>
+            </div>
+
+            <!-- AI-Powered Incident Analysis -->
+            <div class="ai-analysis-section">
+                <div class="ai-analysis-card">
+                    <div class="ai-analysis-header">
+                        <h2><i class="fas fa-brain"></i> AI Incident Analysis</h2>
+                        <span class="ai-badge"><i class="fas fa-robot"></i> Powered by Gemini AI</span>
+                    </div>
+                    <div class="ai-analysis-content" id="ai-analysis-content">
+                        <?php
+                        include 'includes/gemini_helper.php';
+
+                        // Sample incident data - replace with actual incident data
+                        $incidentData = [
+                            'type' => 'Cardiac Arrest',
+                            'location' => 'Downtown Hospital',
+                            'description' => 'Patient experiencing cardiac arrest in emergency room',
+                            'severity' => 'Critical'
+                        ];
+
+                        $analysis = analyzeIncident($incidentData);
+                        if ($analysis) {
+                            echo '<div class="ai-analysis-text">' . nl2br(htmlspecialchars($analysis)) . '</div>';
+                        } else {
+                            echo '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> Unable to generate AI analysis at this time.</div>';
+                        }
+                        ?>
+                    </div>
+                    <div class="ai-analysis-actions">
+                        <button class="btn-ai-refresh" onclick="refreshAIAnalysis()">
+                            <i class="fas fa-sync"></i> Analyze Incidents
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Uncomment if already have content -->
+    <?php /* include('includes/admin-footer.php') */ ?>
+
+    <script>
+        // Incident Priority Management Functionality
+        let INCIDENTS = [];
+        let REFRESH_TIMER = null;
+        const API_LIST_URL = 'api/incidents_list.php';
+
+        // Priority change functionality
+        document.querySelectorAll('.btn-priority').forEach(button => {
+            button.addEventListener('click', function() {
+                const incidentCard = this.closest('.incident-card');
+                const currentPriority = incidentCard.classList.contains('priority-high') ? 'high' :
+                                      incidentCard.classList.contains('priority-medium') ? 'medium' : 'low';
+
+                // Cycle through priorities: high -> medium -> low -> high
+                let newPriority;
+                if (currentPriority === 'high') {
+                    newPriority = 'medium';
+                } else if (currentPriority === 'medium') {
+                    newPriority = 'low';
+                } else {
+                    newPriority = 'high';
+                }
+
+                // Update card styling
+                incidentCard.classList.remove('priority-high', 'priority-medium', 'priority-low');
+                incidentCard.classList.add(`priority-${newPriority}`);
+
+                // Update button styling and text
+                this.className = `btn-priority btn-${newPriority}`;
+                this.textContent = `${newPriority.charAt(0).toUpperCase() + newPriority.slice(1)} Priority`;
+
+                // Show confirmation
+                showNotification(`Incident priority changed to ${newPriority.toUpperCase()}`, 'success');
+            });
+        });
+
+        // Resolve incident functionality
+        document.querySelectorAll('.btn-action .fa-check').forEach(icon => {
+            icon.parentElement.addEventListener('click', function() {
+                const incidentCard = this.closest('.incident-card');
+                const incidentTitle = incidentCard.querySelector('.incident-title').textContent;
+
+                if (confirm(`Are you sure you want to resolve the incident: "${incidentTitle}"?`)) {
+                    // Change status to resolved
+                    const statusBadge = incidentCard.querySelector('.status-badge');
+                    statusBadge.className = 'status-badge status-resolved';
+                    statusBadge.textContent = 'Resolved';
+
+                    // Add resolved styling
+                    incidentCard.style.opacity = '0.7';
+                    incidentCard.style.borderLeftColor = '#28a745';
+
+                    showNotification('Incident marked as resolved', 'success');
+                }
+            });
+        });
+
+        // Contact functionality
+        document.querySelectorAll('.btn-action .fa-phone').forEach(icon => {
+            icon.parentElement.addEventListener('click', function() {
+                const incidentCard = this.closest('.incident-card');
+                const callerInfo = incidentCard.querySelector('.detail-value').textContent;
+                const phoneMatch = callerInfo.match(/(\+?\d{1,3}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4})/);
+
+                if (phoneMatch) {
+                    const phoneNumber = phoneMatch[1];
+                    if (confirm(`Call ${phoneNumber}?`)) {
+                        // In a real system, this would initiate a phone call
+                        showNotification(`Initiating call to ${phoneNumber}`, 'info');
+                    }
+                } else {
+                    showNotification('Phone number not found', 'error');
+                }
+            });
+        });
+
+        // AI refresh for incident analysis
+        function refreshAIAnalysis() {
+            const payload = {
+                type: 'General',
+                location: 'Unknown',
+                description: 'Summarize current incident list and provide recommendations',
+                severity: 'Variable'
+            };
+            const container = document.getElementById('ai-analysis-content');
+            container.innerHTML = '<div class="ai-loading"><i class="fas fa-spinner"></i> Generating analysis...</div>';
+            fetch('api/ai.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'analyze_incident', payload })
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (json.ok && json.text) {
+                    container.innerHTML = '<div class="ai-analysis-text">' + json.text.replace(/\n/g,'<br>') + '</div>';
+                } else {
+                    container.innerHTML = '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> Unable to generate AI analysis at this time.</div>';
+                }
+            })
+            .catch(() => {
+                container.innerHTML = '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> AI request failed.</div>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshAIAnalysis();
+        });
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'ers_incidents') {
+                refreshAIAnalysis();
+            }
+        });
+
+        // Update incident functionality
+        document.querySelectorAll('.btn-action .fa-edit').forEach(icon => {
+            icon.parentElement.addEventListener('click', function() {
+                const incidentCard = this.closest('.incident-card');
+                const incidentTitle = incidentCard.querySelector('.incident-title').textContent;
+
+                // Simple update dialog (in a real system, this would open a modal)
+                const newDescription = prompt('Update incident description:', incidentTitle);
+                if (newDescription && newDescription !== incidentTitle) {
+                    incidentCard.querySelector('.incident-title').textContent = newDescription;
+                    showNotification('Incident updated successfully', 'success');
+                }
+            });
+        });
+
+        // Filter functionality
+        const priorityFilter = document.getElementById('priority-filter');
+        const statusFilter = document.getElementById('status-filter');
+        const typeFilter = document.getElementById('type-filter');
+        const searchInput = document.getElementById('search');
+
+        function applyFilters() {
+            renderDynamicIncidents();
+        }
+
+        // Add event listeners to filters
+        priorityFilter.addEventListener('change', applyFilters);
+        statusFilter.addEventListener('change', applyFilters);
+        typeFilter.addEventListener('change', applyFilters);
+        searchInput.addEventListener('input', applyFilters);
+
+        // Update statistics
+        function updateStats() {
+            const cards = Array.from(document.querySelectorAll('#incident-list-dynamic .incident-card'))
+                .filter(card => card.style.display !== 'none');
+            let highCount = 0, mediumCount = 0, lowCount = 0;
+            cards.forEach(card => {
+                if (card.classList.contains('priority-high')) highCount++;
+                else if (card.classList.contains('priority-medium')) mediumCount++;
+                else if (card.classList.contains('priority-low')) lowCount++;
+            });
+            document.querySelector('.stats-content h3').textContent = highCount;
+            document.querySelectorAll('.stats-content h3')[1].textContent = mediumCount;
+            document.querySelectorAll('.stats-content h3')[2].textContent = lowCount;
+        }
+
+        function mapStatusToBadge(status) {
+            const s = (status || '').toLowerCase();
+            if (s === 'dispatched') return { cls: 'status-dispatched', label: 'Dispatched' };
+            if (s === 'resolved' || s === 'cancelled') return { cls: 'status-resolved', label: 'Resolved' };
+            return { cls: 'status-active', label: 'Active' }; // pending / default
+        }
+
+        function capitalize(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1); }
+
+        function incidentCardHtml(i) {
+            const priority = (i.priority || 'low').toLowerCase();
+            const statusInfo = mapStatusToBadge(i.status);
+            const created = new Date(i.created_at || Date.now());
+            const title = `${capitalize(i.type)} Incident`;
+            const location = i.location || i.location_address || 'Unknown location';
+            const ref = i.incident_code || i.reference_no || '';
+            return `
+                <div class="incident-card priority-${priority}" data-ref="${ref}">
+                    <div class="incident-header">
+                        <div>
+                            <h3 class="incident-title">${title} ${ref ? `- ${ref}` : ''}</h3>
+                            <div class="incident-meta">
+                                <span><i class="fas fa-clock"></i> ${created.toLocaleString()}</span>
+                                <span><i class="fas fa-map-marker-alt"></i> ${location}</span>
+                                <span class="status-badge ${statusInfo.cls}">${statusInfo.label}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="incident-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Type</span>
+                            <span class="detail-value">${capitalize(i.type)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Priority</span>
+                            <span class="detail-value">${capitalize(priority)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Description</span>
+                            <span class="detail-value">${(i.description || '').substring(0, 120)}${(i.description||'').length>120?'...':''}</span>
+                        </div>
+                    </div>
+                    <div class="incident-actions">
+                        <button class="btn-priority btn-${priority}">${capitalize(priority)} Priority</button>
+                        <button class="btn-action"><i class="fas fa-edit"></i> Update</button>
+                        <button class="btn-action"><i class="fas fa-phone"></i> Contact</button>
+                        <button class="btn-action"><i class="fas fa-check"></i> Resolve</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function passFilters(i) {
+            const priorityValue = (priorityFilter.value || '').toLowerCase();
+            const statusValue = (statusFilter.value || '').toLowerCase();
+            const typeValue = (typeFilter.value || '').toLowerCase();
+            const searchValue = (searchInput.value || '').toLowerCase();
+
+            if (priorityValue && (i.priority || '').toLowerCase() !== priorityValue) return false;
+
+            if (statusValue) {
+                const s = (i.status || '').toLowerCase();
+                const mapped = s === 'dispatched' ? 'dispatched' : (s === 'resolved' || s === 'cancelled' ? 'resolved' : 'active');
+                if (mapped !== statusValue) return false;
+            }
+
+            if (typeValue && (i.type || '').toLowerCase() !== typeValue) return false;
+
+            if (searchValue) {
+                const hay = [i.reference_no, i.type, i.location, i.location_address, i.description]
+                    .map(v => (v || '').toString().toLowerCase()).join(' ');
+                if (!hay.includes(searchValue)) return false;
+            }
+            return true;
+        }
+
+        function renderDynamicIncidents() {
+            const container = document.getElementById('incident-list-dynamic');
+            if (!container) return;
+            const filtered = INCIDENTS.filter(passFilters);
+            if (!filtered.length) {
+                container.innerHTML = '<div class="incident-card empty">No incidents yet. Logged calls will appear here.</div>';
+            } else {
+                container.innerHTML = filtered.map(incidentCardHtml).join('');
+            }
+            updateStats();
+        }
+
+        async function fetchIncidents() {
+            try {
+                const res = await fetch(API_LIST_URL);
+                const data = await res.json();
+                if (data && data.ok) {
+                    INCIDENTS = data.items || [];
+                } else {
+                    INCIDENTS = [];
+                }
+            } catch (e) {
+                console.warn('Failed to fetch incidents', e);
+                INCIDENTS = [];
+            }
+            renderDynamicIncidents();
+        }
+
+        // Notification system
+        function showNotification(message, type) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => notification.remove());
+
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+
+            // Set background color based on type
+            if (type === 'success') {
+                notification.style.backgroundColor = '#28a745';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#dc3545';
+            } else if (type === 'info') {
+                notification.style.backgroundColor = '#17a2b8';
+            }
+
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+
+            .notification {
+                font-family: inherit;
+            }
+
+            .btn-priority, .btn-action {
+                transition: all 0.3s ease;
+            }
+
+            .btn-priority:hover, .btn-action:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize stats on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchIncidents();
+            if (REFRESH_TIMER) clearInterval(REFRESH_TIMER);
+            REFRESH_TIMER = setInterval(fetchIncidents, 10000); // refresh every 10s
+        });
+    </script>
+
+    <script>
+    // Handle URL params for deep linking from reports
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const period = params.get('period');
+            if (code) {
+                alert('Opening incident details for: ' + code);
+            }
+            if (period) {
+                console.log('Incident view period:', period);
+            }
+        } catch (e) {}
+    });
+    </script>
+</body>
+</html>
