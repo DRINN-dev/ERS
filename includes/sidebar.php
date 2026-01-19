@@ -30,42 +30,42 @@
                 <ul class="sidebar-menu">
                     <li class="sidebar-menu-item">
                         <a href="index.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-                            <span>🚑 Dashboard</span>
+                            <span> <i class="fa-solid fa-gauge"></i>Dashboard</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="call.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'call.php' ? 'active' : ''; ?>">
-                            <span>📞 Call Receiving & Incident Logs</span>
+                            <span> <i class="fa-solid fa-phone"></i> Call Receiving & Incident Logs</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="incident.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'incident.php' ? 'active' : ''; ?>">
-                            <span>🩼 Incident Priority Management</span>
+                            <span> <i class="fa-solid fa-crutch"></i>Incident Priority Management</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="dispatch.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'dispatch.php' ? 'active' : ''; ?>">
-                            <span>🚨 Dispatch Center</span>
+                            <span><i class="fa-solid fa-bell"></i> Dispatch Center</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="gps.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'gps.php' ? 'active' : ''; ?>">
-                            <span>🖲️ GPS tracking</span>
+                            <span><i class="fa-solid fa-map"></i> GPS tracking</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="resources.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'resources.php' ? 'active' : ''; ?>">
-                            <span>🚔 Resources Status</span>
+                            <span><i class="fa-solid fa-truck-medical"></i> Resources Status</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="interagency.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'interagency.php' ? 'active' : ''; ?>">
-                            <span>🤝 Inter-Agency</span>
+                            <span><i class="fa-solid fa-envelope"></i> Inter-Agency</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="report.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'report.php' ? 'active' : ''; ?>">
-                            <span>📊 Report Analytics</span>
+                            <span><i class="fa-solid fa-chart-simple"></i> Report Analytics</span>
                         </a>
                     </li>
         </nav>
