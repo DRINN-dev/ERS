@@ -1,4 +1,3 @@
-
 :root {
     --sidebar-width-1: 280px;
     --sidebar-collapsed-width-1: 70px;
@@ -139,31 +138,25 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    text-align: center;
+    text-align: left;
 }
 
 .sidebar-menu-item {
     margin-bottom: 0.25rem;
-    display: flex;
-    justify-content: center;
-    align-items: right;
 }
 
 /* Sidebar Links */
 .sidebar-link {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    padding: 0.75rem 1.5rem;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
     color: var(--sidebar-text-1);
     text-decoration: none;
     border-radius: 0.5rem;
     transition: var(--sidebar-transition-1);
     font-size: 0.95rem;
     position: relative;
-    width: 90%;
-    margin: 0 auto;
 }
 
 .sidebar-link:hover {
@@ -180,11 +173,10 @@
     width: 20px;
     text-align: center;
     font-size: 1rem;
-    flex-shrink: 0;
 }
 
 .sidebar-link span {
-    flex: 0 1 auto;
+    flex: 1;
 }
 
 /* Submenu Styles */
