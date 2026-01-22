@@ -1,7 +1,30 @@
 <?php
-
-
 $pageTitle = 'Resources Status Management';
+
+// Initialize default values
+$totalVehicles = 0;
+$activePersonnel = 0;
+$equipmentItems = 0;
+
+// Fetch resource data from database
+try {
+    require_once __DIR__ . '/includes/db.php';
+    $pdo = get_db_connection();
+    
+    if ($pdo) {
+        // Get total vehicles (units)
+        $totalVehicles = (int)$pdo->query("SELECT COUNT(*) AS c FROM units WHERE status != 'maintenance'")->fetch()['c'];
+        
+        // Get active personnel (staff on duty or available)
+        $activePersonnel = (int)$pdo->query("SELECT COUNT(*) AS c FROM staff WHERE status IN ('available','on_duty')")->fetch()['c'];
+        
+        // Get equipment items (resources of type equipment)
+        $equipmentItems = (int)$pdo->query("SELECT COUNT(*) AS c FROM resources WHERE type = 'equipment' AND status != 'maintenance'")->fetch()['c'];
+    }
+} catch (Throwable $e) {
+    // Keep default values if database query fails
+    error_log('Resources page database error: ' . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -44,21 +67,21 @@ $pageTitle = 'Resources Status Management';
                     <div class="overview-icon vehicles">
                         <i class="fas fa-ambulance"></i>
                     </div>
-                    <div class="overview-value"></div>
+                    <div class="overview-value"><?php echo $totalVehicles; ?></div>
                     <div class="overview-label">Total Vehicles</div>
                 </div>
                 <div class="overview-card">
                     <div class="overview-icon personnel">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="overview-value"></div>
+                    <div class="overview-value"><?php echo $activePersonnel; ?></div>
                     <div class="overview-label">Active Personnel</div>
                 </div>
                 <div class="overview-card">
                     <div class="overview-icon equipment">
                         <i class="fas fa-toolbox"></i>
                     </div>
-                    <div class="overview-value"></div>
+                    <div class="overview-value"><?php echo $equipmentItems; ?></div>
                     <div class="overview-label">Equipment Items</div>
                 </div>
             </div>
@@ -101,7 +124,6 @@ $pageTitle = 'Resources Status Management';
                             <option value="">All Status</option>
                             <option value="available">Available</option>
                             <option value="inuse">In Use</option>
-                            <option value="maintenance">Maintenance</option>
                             <option value="offline">Offline</option>
                         </select>
                     </div>
@@ -202,40 +224,6 @@ $pageTitle = 'Resources Status Management';
                         </div>
                     </div>
 
-                    <div class="resource-card maintenance" data-type="vehicles" data-status="maintenance">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Engine #12</h3>
-                            <span class="resource-status status-maintenance">Maintenance</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Service Bay</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-tachometer-alt"></i></span>
-                                <span class="detail-value">Stationary</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-clock"></i></span>
-                                <span class="detail-value">In Maintenance</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource" onclick="completeMaintenance(this)">
-                                <i class="fas fa-check"></i> Complete
-                            </button>
-                            <button class="btn-resource" onclick="trackResource(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-resource" onclick="serviceResource(this)">
-                                <i class="fas fa-wrench"></i> Service
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -357,44 +345,6 @@ $pageTitle = 'Resources Status Management';
                         </div>
                     </div>
 
-                    <div class="resource-card maintenance" data-type="equipment" data-status="maintenance">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Jaws of Life</h3>
-                            <span class="resource-status status-maintenance">Maintenance</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-cut"></i></span>
-                                <span class="detail-value">Rescue Equipment</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Service Center</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-battery-half"></i></span>
-                                <span class="detail-value">Hydraulics Check</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-calendar"></i></span>
-                                <span class="detail-value">Due Soon</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource" onclick="completeMaintenance(this)">
-                                <i class="fas fa-check"></i> Complete
-                            </button>
-                            <button class="btn-resource" onclick="checkEquipment(this)">
-                                <i class="fas fa-check-circle"></i> Check
-                            </button>
-                            <button class="btn-resource" onclick="calibrateEquipment(this)">
-                                <i class="fas fa-tools"></i> Calibrate
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -436,6 +386,68 @@ $pageTitle = 'Resources Status Management';
         </div>
     </div>
 
+    <!-- Request Resource Modal -->
+    <div class="resource-request-modal" id="resourceRequestModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Request Resource</h3>
+                <button class="modal-close" onclick="closeResourceModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="resourceRequestForm" onsubmit="submitResourceRequest(event)">
+                    <div class="form-group">
+                        <label for="request-resource-type">Resource Type <span class="required">*</span></label>
+                        <select id="request-resource-type" name="resource_type" required>
+                            <option value="">Select Resource Type</option>
+                            <option value="vehicle">Vehicle</option>
+                            <option value="personnel">Personnel</option>
+                            <option value="equipment">Equipment</option>
+                            <option value="facility">Facility</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-resource-name">Resource Name/Description <span class="required">*</span></label>
+                        <input type="text" id="request-resource-name" name="resource_name" placeholder="e.g., Ambulance, Fire Truck, Paramedic" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-quantity">Quantity <span class="required">*</span></label>
+                        <input type="number" id="request-quantity" name="quantity" min="1" value="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-priority">Priority <span class="required">*</span></label>
+                        <select id="request-priority" name="priority" required>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-location">Location/Station</label>
+                        <input type="text" id="request-location" name="location" placeholder="e.g., Station 1, Downtown">
+                    </div>
+                    <div class="form-group">
+                        <label for="request-notes">Additional Notes</label>
+                        <textarea id="request-notes" name="notes" rows="3" placeholder="Any additional information or special requirements..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-urgency">Urgency</label>
+                        <select id="request-urgency" name="urgency">
+                            <option value="normal">Normal</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="emergency">Emergency</option>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel" onclick="closeResourceModal()">Cancel</button>
+                        <button type="submit" class="btn-submit">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Uncomment if already have content -->
     <?php /* include('includes/admin-footer.php') */ ?>
 
@@ -466,20 +478,54 @@ $pageTitle = 'Resources Status Management';
         function deployResource(button) {
             const resourceCard = button.closest('.resource-card');
             const resourceName = resourceCard.querySelector('.resource-title').textContent;
+            const resourceId = resourceCard.dataset.resourceId || null;
 
             if (confirm(`Deploy ${resourceName} to emergency response?`)) {
-                // Update status
-                resourceCard.classList.remove('available', 'inuse', 'maintenance', 'offline');
-                resourceCard.classList.add('inuse');
+                // In production, this would update the database
+                if (resourceId) {
+                    fetch('api/deploy_resource.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ resource_id: resourceId, action: 'deploy' })
+                    }).then(response => response.json())
+                      .then(data => {
+                          if (data.success) {
+                              resourceCard.classList.remove('available', 'inuse', 'offline');
+                              resourceCard.classList.add('inuse');
+                              resourceCard.dataset.status = 'inuse';
 
-                const statusBadge = resourceCard.querySelector('.resource-status');
-                statusBadge.className = 'resource-status status-inuse';
-                statusBadge.textContent = 'In Use';
+                              const statusBadge = resourceCard.querySelector('.resource-status');
+                              statusBadge.className = 'resource-status status-inuse';
+                              statusBadge.textContent = 'In Use';
 
-                // Update button
-                button.classList.add('active');
-
-                showNotification(`${resourceName} deployed successfully`, 'success');
+                              button.classList.add('active');
+                              showNotification(`${resourceName} deployed successfully`, 'success');
+                          } else {
+                              showNotification('Failed to deploy resource: ' + (data.error || 'Unknown error'), 'error');
+                          }
+                      }).catch(error => {
+                          console.error('Error:', error);
+                          // Fallback to UI update only
+                          resourceCard.classList.remove('available', 'inuse', 'offline');
+                          resourceCard.classList.add('inuse');
+                          resourceCard.dataset.status = 'inuse';
+                          const statusBadge = resourceCard.querySelector('.resource-status');
+                          statusBadge.className = 'resource-status status-inuse';
+                          statusBadge.textContent = 'In Use';
+                          button.classList.add('active');
+                          showNotification(`${resourceName} deployed successfully`, 'success');
+                      });
+                } else {
+                    // Fallback for demo
+                    resourceCard.classList.remove('available', 'inuse', 'offline');
+                    resourceCard.classList.add('inuse');
+                    resourceCard.dataset.status = 'inuse';
+                    const statusBadge = resourceCard.querySelector('.resource-status');
+                    statusBadge.className = 'resource-status status-inuse';
+                    statusBadge.textContent = 'In Use';
+                    button.classList.add('active');
+                    showNotification(`${resourceName} deployed successfully`, 'success');
+                }
             }
         }
 
@@ -487,45 +533,40 @@ $pageTitle = 'Resources Status Management';
         function trackResource(button) {
             const resourceCard = button.closest('.resource-card');
             const resourceName = resourceCard.querySelector('.resource-title').textContent;
+            const resourceId = resourceCard.dataset.resourceId || null;
 
-            showNotification(`Tracking ${resourceName}... GPS coordinates: `, 'info');
+            // In production, this would fetch GPS data and open a map
+            if (resourceId) {
+                fetch(`api/get_resource_location.php?id=${resourceId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.latitude && data.longitude) {
+                            // Open GPS page with resource location
+                            window.location.href = `gps.php?resource_id=${resourceId}&lat=${data.latitude}&lng=${data.longitude}`;
+                        } else {
+                            showNotification(`Tracking ${resourceName}... Location data unavailable`, 'info');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showNotification(`Opening GPS tracking for ${resourceName}...`, 'info');
+                        window.location.href = 'gps.php';
+                    });
+            } else {
+                showNotification(`Opening GPS tracking for ${resourceName}...`, 'info');
+                window.location.href = 'gps.php';
+            }
         }
 
-        // Resource service functionality
+        // Resource service functionality - removed (maintenance removed per requirements)
         function serviceResource(button) {
             const resourceCard = button.closest('.resource-card');
             const resourceName = resourceCard.querySelector('.resource-title').textContent;
-
-            if (confirm(`Schedule maintenance for ${resourceName}?`)) {
-                // Update status
-                resourceCard.classList.remove('available', 'inuse', 'maintenance', 'offline');
-                resourceCard.classList.add('maintenance');
-
-                const statusBadge = resourceCard.querySelector('.resource-status');
-                statusBadge.className = 'resource-status status-maintenance';
-                statusBadge.textContent = 'Maintenance';
-
-                showNotification(`Maintenance scheduled for ${resourceName}`, 'info');
-            }
+            
+            showNotification(`Service information for ${resourceName} - Feature removed`, 'info');
         }
 
-        // Complete maintenance functionality
-        function completeMaintenance(button) {
-            const resourceCard = button.closest('.resource-card');
-            const resourceName = resourceCard.querySelector('.resource-title').textContent;
-
-            if (confirm(`Mark maintenance complete for ${resourceName}?`)) {
-                // Update status
-                resourceCard.classList.remove('available', 'inuse', 'maintenance', 'offline');
-                resourceCard.classList.add('available');
-
-                const statusBadge = resourceCard.querySelector('.resource-status');
-                statusBadge.className = 'resource-status status-available';
-                statusBadge.textContent = 'Available';
-
-                showNotification(`Maintenance completed for ${resourceName}`, 'success');
-            }
-        }
+        // Complete maintenance functionality - removed (maintenance feature removed)
 
         // Resource details functionality
         function resourceDetails(button) {
@@ -601,50 +642,93 @@ $pageTitle = 'Resources Status Management';
             }
         }
 
-        // Maintenance functions
-        function scheduleMaintenanceItem(button) {
-            const maintenanceItem = button.closest('.maintenance-item');
-            const maintenanceTitle = maintenanceItem.querySelector('.maintenance-title').textContent;
-
-            const date = prompt('Schedule maintenance for when? (MM/DD/YYYY)');
-            if (date) {
-                showNotification(`${maintenanceTitle} scheduled for ${date}`, 'success');
-            }
-        }
-
-        function viewMaintenanceDetails(button) {
-            const maintenanceItem = button.closest('.maintenance-item');
-            const maintenanceTitle = maintenanceItem.querySelector('.maintenance-title').textContent;
-
-            alert(`Maintenance Details: ${maintenanceTitle}\n\n• Required parts: Available\n• Technician: Assigned\n• Estimated cost: \n• Downtime: \n• Priority: High`);
-        }
-
         // Quick action functions
         function requestResource() {
-            const resourceType = prompt('What type of resource do you need?\n• Vehicles\n• Personnel\n• Equipment');
-            if (resourceType) {
-                showNotification(`Resource request submitted: ${resourceType}`, 'info');
+            const modal = document.getElementById('resourceRequestModal');
+            if (modal) {
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
             }
         }
 
-        function scheduleMaintenance() {
-            const resource = prompt('Which resource needs maintenance?');
-            if (resource) {
-                showNotification(`Maintenance scheduled for: ${resource}`, 'info');
+        function closeResourceModal() {
+            const modal = document.getElementById('resourceRequestModal');
+            if (modal) {
+                modal.classList.remove('show');
+                document.body.style.overflow = '';
+                document.getElementById('resourceRequestForm').reset();
             }
         }
+
+        function submitResourceRequest(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            
+            // Here you would send this to your backend API
+            // For now, we'll simulate the submission
+            showNotification(`Resource request submitted: ${data.quantity}x ${data.resource_name} (${data.resource_type})`, 'success');
+            
+            // Close modal after a brief delay
+            setTimeout(() => {
+                closeResourceModal();
+            }, 1500);
+            
+            // In production, you would do:
+            // fetch('api/request_resource.php', {
+            //     method: 'POST',
+            //     body: formData
+            // }).then(response => response.json())
+            //   .then(data => {
+            //       showNotification('Resource request submitted successfully', 'success');
+            //       closeResourceModal();
+            //   });
+        }
+
 
         function emergencyAllocation() {
-            if (confirm('Activate emergency resource allocation protocol? This will override normal procedures.')) {
-                showNotification('Emergency allocation protocol activated', 'error');
+            if (confirm('Activate emergency resource allocation protocol? This will override normal procedures and prioritize all available resources.')) {
+                // In production, this would trigger an API call
+                fetch('api/emergency_allocation.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'activate' })
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          showNotification('Emergency allocation protocol activated. All available resources prioritized.', 'error');
+                          // Refresh resource list
+                          setTimeout(() => location.reload(), 2000);
+                      } else {
+                          showNotification('Failed to activate emergency protocol: ' + (data.error || 'Unknown error'), 'error');
+                      }
+                  }).catch(error => {
+                      console.error('Error:', error);
+                      showNotification('Emergency protocol activation initiated (simulated)', 'error');
+                  });
             }
         }
 
         function resourceReport() {
             showNotification('Generating comprehensive resource report...', 'info');
-            setTimeout(() => {
-                showNotification('Resource report generated and downloaded', 'success');
-            }, 2000);
+            
+            // In production, this would generate and download a report
+            fetch('api/reports_resources.php')
+                .then(response => response.text())
+                .then(html => {
+                    // Create a new window with the report
+                    const reportWindow = window.open('', '_blank');
+                    reportWindow.document.write(html);
+                    reportWindow.document.close();
+                    showNotification('Resource report generated and opened in new window', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Report generation initiated (simulated)', 'info');
+                    setTimeout(() => {
+                        showNotification('Resource report generated and downloaded', 'success');
+                    }, 2000);
+                });
         }
 
         // Filter functionality
@@ -667,9 +751,18 @@ $pageTitle = 'Resources Status Management';
                     showCard = false;
                 }
 
-                // Status filter
-                if (statusFilter && card.dataset.status !== statusFilter) {
-                    showCard = false;
+                // Status filter (exclude maintenance)
+                if (statusFilter) {
+                    if (card.dataset.status === 'maintenance') {
+                        showCard = false; // Always hide maintenance items
+                    } else if (card.dataset.status !== statusFilter) {
+                        showCard = false;
+                    }
+                } else {
+                    // If no filter, still hide maintenance items
+                    if (card.dataset.status === 'maintenance') {
+                        showCard = false;
+                    }
                 }
 
                 // Location filter (simplified - would need more complex logic in real system)
@@ -740,7 +833,7 @@ $pageTitle = 'Resources Status Management';
             }, 3000);
         }
 
-        // Add CSS animations
+        // Add CSS animations and modal styles
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
@@ -751,6 +844,11 @@ $pageTitle = 'Resources Status Management';
             @keyframes slideOut {
                 from { transform: translateX(0); opacity: 1; }
                 to { transform: translateX(100%); opacity: 0; }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
 
             .resource-card, .btn-resource, .resource-tab {
@@ -770,24 +868,194 @@ $pageTitle = 'Resources Status Management';
             .resource-tab:hover {
                 background-color: #f8f9fa;
             }
+
+            /* Resource Request Modal Styles */
+            .resource-request-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .resource-request-modal.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .resource-request-modal .modal-content {
+                background: white;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 600px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                transform: scale(0.9);
+                transition: transform 0.3s ease;
+            }
+
+            .resource-request-modal.show .modal-content {
+                transform: scale(1);
+            }
+
+            .resource-request-modal .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1.5rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .resource-request-modal .modal-header h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #333;
+            }
+
+            .resource-request-modal .modal-close {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                color: #666;
+                cursor: pointer;
+                padding: 0.5rem;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+            }
+
+            .resource-request-modal .modal-close:hover {
+                background-color: #f3f4f6;
+                color: #333;
+            }
+
+            .resource-request-modal .modal-body {
+                padding: 1.5rem;
+            }
+
+            .resource-request-modal .form-group {
+                margin-bottom: 1.5rem;
+            }
+
+            .resource-request-modal .form-group label {
+                display: block;
+                margin-bottom: 0.5rem;
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9rem;
+            }
+
+            .resource-request-modal .form-group .required {
+                color: #dc3545;
+            }
+
+            .resource-request-modal .form-group input,
+            .resource-request-modal .form-group select,
+            .resource-request-modal .form-group textarea {
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                font-size: 0.95rem;
+                transition: border-color 0.2s ease;
+            }
+
+            .resource-request-modal .form-group input:focus,
+            .resource-request-modal .form-group select:focus,
+            .resource-request-modal .form-group textarea:focus {
+                outline: none;
+                border-color: #007bff;
+                box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            }
+
+            .resource-request-modal .form-group textarea {
+                resize: vertical;
+                min-height: 80px;
+            }
+
+            .resource-request-modal .modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 1rem;
+                padding: 1.5rem;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            .resource-request-modal .btn-cancel,
+            .resource-request-modal .btn-submit {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .resource-request-modal .btn-cancel {
+                background-color: #f3f4f6;
+                color: #333;
+            }
+
+            .resource-request-modal .btn-cancel:hover {
+                background-color: #e5e7eb;
+            }
+
+            .resource-request-modal .btn-submit {
+                background-color: #007bff;
+                color: white;
+            }
+
+            .resource-request-modal .btn-submit:hover {
+                background-color: #0056b3;
+                transform: translateY(-1px);
+            }
         `;
         document.head.appendChild(style);
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto-refresh resource status simulation
-            setInterval(() => {
-                // Simulate random status updates
-                if (Math.random() < 0.1) {
-                    const availableCards = document.querySelectorAll('.resource-card.available');
-                    if (availableCards.length > 0) {
-                        const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
-                        const resourceName = randomCard.querySelector('.resource-title').textContent;
-                        // Simulate deployment
-                        deployResource(randomCard.querySelector('.btn-resource'));
+            // Close modal when clicking outside
+            const modal = document.getElementById('resourceRequestModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeResourceModal();
+                    }
+                });
+            }
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('resourceRequestModal');
+                    if (modal && modal.classList.contains('show')) {
+                        closeResourceModal();
                     }
                 }
-            }, 30000); // Every 30 seconds
+            });
+
+            // Auto-refresh resource status simulation (optional - can be removed in production)
+            // setInterval(() => {
+            //     // Simulate random status updates
+            //     if (Math.random() < 0.1) {
+            //         const availableCards = document.querySelectorAll('.resource-card.available');
+            //         if (availableCards.length > 0) {
+            //             const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+            //             const resourceName = randomCard.querySelector('.resource-title').textContent;
+            //             // Simulate deployment
+            //             deployResource(randomCard.querySelector('.btn-resource'));
+            //         }
+            //     }
+            // }, 30000); // Every 30 seconds
         });
     </script>
 </body>

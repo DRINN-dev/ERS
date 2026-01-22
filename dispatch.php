@@ -1,7 +1,42 @@
 <?php
-
-
 $pageTitle = 'Emergency Dispatch Center';
+
+// Initialize default values
+$activeIncidents = 0;
+$availableUnits = 0;
+$pendingCalls = 0;
+$systemStatus = 'All systems operational';
+
+// Fetch accurate data from database
+try {
+    require_once __DIR__ . '/includes/db.php';
+    $pdo = get_db_connection();
+    
+    if ($pdo) {
+        // Get active incidents (pending or dispatched)
+        $activeIncidents = (int)$pdo->query("SELECT COUNT(*) AS c FROM incidents WHERE status IN ('pending','dispatched')")->fetch()['c'];
+        
+        // Get available units
+        $availableUnits = (int)$pdo->query("SELECT COUNT(*) AS c FROM units WHERE status='available'")->fetch()['c'];
+        
+        // Get pending calls
+        $pendingCalls = (int)$pdo->query("SELECT COUNT(*) AS c FROM incidents WHERE status='pending'")->fetch()['c'];
+        
+        // Determine system status based on available units and active incidents
+        if ($availableUnits === 0 && $activeIncidents > 0) {
+            $systemStatus = 'Warning: No available units';
+        } elseif ($activeIncidents > 10) {
+            $systemStatus = 'High load: Multiple active incidents';
+        } elseif ($availableUnits < 3 && $activeIncidents > 0) {
+            $systemStatus = 'Limited resources available';
+        } else {
+            $systemStatus = 'All systems operational';
+        }
+    }
+} catch (Throwable $e) {
+    // Keep default values if database query fails
+    error_log('Dispatch page database error: ' . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -40,7 +75,7 @@ $pageTitle = 'Emergency Dispatch Center';
             <div class="alert-panel">
                 <i class="fas fa-exclamation-triangle fa-2x"></i>
                 <div>
-                    <strong>System Status:</strong> All systems operational | Active incidents: 3 | Available units: 8
+                    <strong>System Status:</strong> <?php echo htmlspecialchars($systemStatus); ?> | Active incidents: <?php echo $activeIncidents; ?> | Available units: <?php echo $availableUnits; ?>
                 </div>
             </div>
 
@@ -73,7 +108,7 @@ $pageTitle = 'Emergency Dispatch Center';
                             <i class="fas fa-phone"></i>
                             Active Emergency Calls
                         </h2>
-                        <span style="background: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">3 Active</span>
+                        <span style="background: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $activeIncidents; ?> Active</span>
                     </div>
 
                     <div class="call-card high">
@@ -150,7 +185,7 @@ $pageTitle = 'Emergency Dispatch Center';
                             <i class="fas fa-ambulance"></i>
                             Available Units
                         </h2>
-                        <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">4 Available</span>
+                        <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
                     </div>
 
                     <div class="unit-card available">
@@ -266,11 +301,11 @@ $pageTitle = 'Emergency Dispatch Center';
                         <?php
                         include 'includes/gemini_helper.php';
 
-                        // Sample dispatch data - replace with actual real-time data
+                        // Real-time dispatch data from database
                         $dispatchData = [
-                            'active_incidents' => 3,
-                            'available_units' => 8,
-                            'pending_calls' => 2,
+                            'active_incidents' => $activeIncidents,
+                            'available_units' => $availableUnits,
+                            'pending_calls' => $pendingCalls,
                             'current_incident' => 'Cardiac Arrest - Downtown Hospital'
                         ];
 
