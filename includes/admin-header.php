@@ -1,7 +1,7 @@
 <?php
 /**
  * Reusable Admin Header Component - Improved Design
- * Include this file in your pages: <?php include 'sidebar/admin-header.php'; ?>
+ * Include this file in your pages: <?php include 'includes/admin-header.php'; ?>
  * 
  * Features:
  * - Responsive menu toggle
@@ -10,6 +10,12 @@
  * - Dark mode support
  * - Clean, modern design
  */
+require_once __DIR__ . '/auth.php';
+
+$current_user = get_logged_in_user();
+$user_name = $current_user ? $current_user['name'] : 'Admin User';
+$user_email = $current_user ? $current_user['email'] : 'admin@example.com';
+$user_role = $current_user ? ucfirst($current_user['role']) : 'Administrator';
 ?>
 
 <link rel="stylesheet" href="css/notification-modal.css">;
@@ -45,11 +51,11 @@
         
         <div class="user-profile" id="userProfileBtn">
             <div class="user-info">
-                <div class="user-name">Admin User</div>
-                <div class="user-role">Administrator</div>
+                <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
+                <div class="user-role"><?php echo htmlspecialchars($user_role); ?></div>
             </div>
             <div class="user-avatar">
-                <img src="https://ui-avatars.com/api/?name=Admin+User&background=4c8a89&color=fff&size=128" alt="Admin User" class="avatar-img">
+                <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user_name); ?>&background=4c8a89&color=fff&size=128" alt="<?php echo htmlspecialchars($user_name); ?>" class="avatar-img">
             </div>
             <i class="fas fa-chevron-down dropdown-icon"></i>
         </div>
@@ -61,11 +67,11 @@
     <div class="dropdown-header">
         <div class="dropdown-user-info">
             <div class="dropdown-user-avatar">
-                <img src="https://ui-avatars.com/api/?name=Admin+User&background=4c8a89&color=fff&size=128" alt="Admin User">
+                <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user_name); ?>&background=4c8a89&color=fff&size=128" alt="<?php echo htmlspecialchars($user_name); ?>">
             </div>
             <div class="dropdown-user-details">
-                <div class="dropdown-user-name">Admin User</div>
-                <div class="dropdown-user-email">admin@example.com</div>
+                <div class="dropdown-user-name"><?php echo htmlspecialchars($user_name); ?></div>
+                <div class="dropdown-user-email"><?php echo htmlspecialchars($user_email); ?></div>
             </div>
         </div>
     </div>
@@ -82,7 +88,7 @@
     </div>
     
     <div class="dropdown-footer">
-        <a href="#" class="dropdown-item logout-item">
+        <a href="logout.php" class="dropdown-item logout-item">
             <i class="fas fa-sign-out-alt"></i>
             <span>Logout</span>
         </a>

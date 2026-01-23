@@ -59,8 +59,6 @@ try {
     }
 } catch (Throwable $e) {}
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
