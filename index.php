@@ -538,10 +538,22 @@ try {
             }, 1000);
         }
         function exportChart() {
-            showNotification('Exporting chart...', 'info');
-            setTimeout(() => {
-                showNotification('Chart exported successfully', 'success');
-            }, 1500);
+            // Get incident type data
+            const labels = ['Medical','Fire','Police','Traffic','Other'];
+            const values = typesValues;
+            // Create printable content
+            let printContent = '<h2>Incident Types</h2><table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;"><tr><th>Type</th><th>Count</th></tr>';
+            for (let i = 0; i < labels.length; i++) {
+                printContent += `<tr><td>${labels[i]}</td><td>${values[i]}</td></tr>`;
+            }
+            printContent += '</table>';
+            // Open print window
+            const printWindow = window.open('', '', 'width=600,height=400');
+            printWindow.document.write('<html><head><title>Incident Types</title></head><body>' + printContent + '</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
         }
         function toggleChartView() {
             showNotification('Switching chart view...', 'info');
