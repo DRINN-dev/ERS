@@ -399,7 +399,7 @@ try {
                 <form id="resourceRequestForm" onsubmit="submitResourceRequest(event)">
                     <div class="form-group">
                         <label for="request-resource-type">Resource Type <span class="required">*</span></label>
-                        <select id="request-resource-type" name="resource_type" required>
+                        <select id="request-resource-type" name="resource_type" required onchange="updateResourceFormFields()">
                             <option value="">Select Resource Type</option>
                             <option value="vehicle">Vehicle</option>
                             <option value="personnel">Personnel</option>
@@ -407,14 +407,50 @@ try {
                             <option value="facility">Facility</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="request-resource-name">Resource Name/Description <span class="required">*</span></label>
-                        <input type="text" id="request-resource-name" name="resource_name" placeholder="e.g., Ambulance, Fire Truck, Paramedic" required>
+                    <!-- Common Fields -->
+                    <div id="vehicle-fields">
+                        <div class="form-group">
+                            <label for="request-resource-name">Resource Name/Description <span class="required">*</span></label>
+                            <input type="text" id="request-resource-name" name="resource_name" placeholder="e.g., Ambulance, Fire Truck" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="request-quantity">Quantity <span class="required">*</span></label>
+                            <input type="number" id="request-quantity" name="quantity" min="1" value="1" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="request-quantity">Quantity <span class="required">*</span></label>
-                        <input type="number" id="request-quantity" name="quantity" min="1" value="1" required>
+                    <div id="personnel-fields" style="display:none;">
+                        <div class="form-group">
+                            <label for="personnel-name">Name <span class="required">*</span></label>
+                            <input type="text" id="personnel-name" name="personnel_name" placeholder="e.g., Juan Dela Cruz" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="personnel-role">Personnel Role <span class="required">*</span></label>
+                            <input type="text" id="personnel-role" name="personnel_role" placeholder="e.g., Paramedic, Police Officer">
+                        </div>
+                        <div class="form-group">
+                            <label for="personnel-shift">Shift</label>
+                            <input type="text" id="personnel-shift" name="personnel_shift" placeholder="e.g., Day, Night, On-call">
+                        </div>
+                        <div class="form-group">
+                            <label for="personnel-quantity">Quantity <span class="required">*</span></label>
+                            <input type="number" id="personnel-quantity" name="quantity" min="1" value="1">
+                        </div>
                     </div>
+                    <div id="equipment-fields" style="display:none;">
+                        <div class="form-group">
+                            <label for="equipment-type">Equipment Type <span class="required">*</span></label>
+                            <input type="text" id="equipment-type" name="equipment_type" placeholder="e.g., Defibrillator, Radio">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipment-condition">Condition</label>
+                            <input type="text" id="equipment-condition" name="equipment_condition" placeholder="e.g., New, Calibrated, Needs Repair">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipment-quantity">Quantity <span class="required">*</span></label>
+                            <input type="number" id="equipment-quantity" name="quantity" min="1" value="1">
+                        </div>
+                    </div>
+                    <!-- Shared Fields -->
                     <div class="form-group">
                         <label for="request-priority">Priority <span class="required">*</span></label>
                         <select id="request-priority" name="priority" required>
@@ -452,6 +488,18 @@ try {
     <?php /* include('includes/admin-footer.php') */ ?>
 
     <script>
+                // Update form fields based on resource type
+                function updateResourceFormFields() {
+                    var type = document.getElementById('request-resource-type').value;
+                    document.getElementById('vehicle-fields').style.display = (type === 'vehicle' || type === 'facility' || type === '') ? '' : 'none';
+                    document.getElementById('personnel-fields').style.display = (type === 'personnel') ? '' : 'none';
+                    document.getElementById('equipment-fields').style.display = (type === 'equipment') ? '' : 'none';
+                }
+                // Initialize on modal open
+                document.addEventListener('DOMContentLoaded', function() {
+                    var typeSelect = document.getElementById('request-resource-type');
+                    if (typeSelect) typeSelect.addEventListener('change', updateResourceFormFields);
+                });
         // Emergency Resources Management Functionality
 
         let currentTab = 'vehicles';
