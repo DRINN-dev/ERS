@@ -344,7 +344,10 @@ function sendMessage() {
 
     document.getElementById('chat-messages').appendChild(msg);
     input.value = '';
-    showNotification('Message sent', 'success');
+    // Only show notification if message is not empty
+    if (text && text.trim() !== '') {
+        showNotification('Message sent', 'success');
+    }
 }
 
 /* ================================
@@ -374,7 +377,9 @@ function toggleChannel(channel) {
         }
     });
 
-    showNotification(`Viewing ${channel} channel`, 'info');
+    if (channel === 'all' || channel === 'emergency' || channel === 'logistics') {
+        showNotification(`Viewing ${channel.charAt(0).toUpperCase() + channel.slice(1)} channel`, 'info');
+    }
 }
 
 /* ================================
@@ -481,11 +486,27 @@ function addAgency() { navigateTo('resources.php', { tab: 'agencies' }); }
    NOTIFICATIONS
 ================================ */
 function showNotification(message, type) {
+    // Prevent empty or generic notifications
+    if (!message || message === 'Message sent' || message === 'Viewing undefined channel') return;
+    // Remove existing notification if present
+    const existing = document.querySelector('.notification');
+    if (existing) existing.remove();
     const note = document.createElement('div');
     note.className = `notification ${type}`;
     note.textContent = message;
+    note.style.position = 'fixed';
+    note.style.top = '30px';
+    note.style.right = '30px';
+    note.style.zIndex = 9999;
+    note.style.padding = '1rem 2rem';
+    note.style.borderRadius = '8px';
+    note.style.fontWeight = '600';
+    note.style.fontSize = '1.1rem';
+    note.style.boxShadow = '0 2px 16px rgba(0,0,0,0.12)';
+    note.style.background = type === 'success' ? '#4caf50' : type === 'error' ? '#e53935' : '#2196f3';
+    note.style.color = '#fff';
     document.body.appendChild(note);
-    setTimeout(() => note.remove(), 3000);
+    setTimeout(() => note.remove(), 3500);
 }
 </script>
 

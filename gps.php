@@ -470,7 +470,7 @@ function updateMapVisibility() {
 }
 
 function centerMap() {
-  map.setView([14.6760, 121.0437], 13);
+  map.setView([15.6760, 125.0437], 13);
 }
 
 function refreshMap() {

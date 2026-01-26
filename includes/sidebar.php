@@ -72,8 +72,14 @@
                     </li>
                     <li class="sidebar-menu-item">
                         <a href="report.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'report.php' ? 'active' : ''; ?>">
-                            <i class="fa-solid fa-chart-simple"></i>
+                            <i class="fa-solid fa-chart-area"></i>
                             <span>Report Analytics</span>
+                        </a>
+                    </li>
+                     <li class="sidebar-menu-item">
+                        <a href="review.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'review.php' ? 'active' : ''; ?>">
+                            <i class="fa-solid fa-comment"></i>
+                            <span>Review & Feedback</span>
                         </a>
                     </li>
         </nav>

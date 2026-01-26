@@ -38,6 +38,27 @@ if ($caller_name === '' || $caller_phone === '' || $type === '' || $location ===
     exit;
 }
 
+
+// Duplicate detection: check for similar incident in last 60 minutes
+$duplicate_sql = 'SELECT id, reference_no, type, location_address, created_at FROM incidents WHERE type = :type AND location_address = :location AND created_at >= (NOW() - INTERVAL 60 MINUTE) LIMIT 1';
+$dup_stmt = $pdo->prepare($duplicate_sql);
+$dup_stmt->execute([':type' => $type, ':location' => $location]);
+$duplicate = $dup_stmt->fetch();
+if ($duplicate) {
+    echo json_encode([
+        'ok' => false,
+        'error' => 'Duplicate incident detected',
+        'duplicate_incident' => [
+            'id' => $duplicate['id'],
+            'reference_no' => $duplicate['reference_no'],
+            'type' => $duplicate['type'],
+            'location_address' => $duplicate['location_address'],
+            'created_at' => $duplicate['created_at'],
+        ]
+    ]);
+    exit;
+}
+
 // Generate unique reference number shared between call and incident
 $reference_no = 'REF-' . date('YmdHis') . '-' . str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
 

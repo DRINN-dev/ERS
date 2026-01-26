@@ -299,45 +299,8 @@ try {
                             <i class="fas fa-external-link-alt"></i> View All
                         </button>
                     </div>
-                    <div class="activity-item">
-                        <div class="activity-icon emergency">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">Medical Emergency Reported</div>
-                            <div class="activity-details">Downtown District • Priority: High</div>
-                            <div class="activity-time">2 minutes ago</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon response">
-                            <i class="fas fa-truck-medical"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">Ambulance #5 Dispatched</div>
-                            <div class="activity-details">Unit en route to incident • ETA: 4 minutes</div>
-                            <div class="activity-time">5 minutes ago</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon maintenance">
-                            <i class="fas fa-wrench"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">Equipment Maintenance Completed</div>
-                            <div class="activity-details">Defibrillator Unit #12 • All systems operational</div>
-                            <div class="activity-time">12 minutes ago</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon system">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">System Backup Completed</div>
-                            <div class="activity-details">Daily backup successful • 99.8% uptime maintained</div>
-                            <div class="activity-time">1 hour ago</div>
-                        </div>
+                    <div id="activity-feed-list">
+                        <div class="activity-item"><div class="activity-content">Loading...</div></div>
                     </div>
                 </div>
                 <!-- Alerts Panel -->
@@ -348,32 +311,8 @@ try {
                             <i class="fas fa-external-link-alt"></i> View All
                         </button>
                     </div>
-                    <div class="alert-item critical">
-                        <div class="alert-icon critical">
-                            <i class="fas fa-exclamation-circle"></i>
-                        </div>
-                        <div class="alert-content">
-                            <div class="alert-text">High Response Time Alert</div>
-                            <div class="alert-details">Zone 3 average exceeds 10 minutes</div>
-                        </div>
-                    </div>
-                    <div class="alert-item warning">
-                        <div class="alert-icon warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="alert-content">
-                            <div class="alert-text">Resource Utilization Warning</div>
-                            <div class="alert-details">Ambulance fleet at 85% capacity</div>
-                        </div>
-                    </div>
-                    <div class="alert-item info">
-                        <div class="alert-icon info">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <div class="alert-content">
-                            <div class="alert-text">Weather Alert</div>
-                            <div class="alert-details">Heavy rain expected in 2 hours</div>
-                        </div>
+                    <div id="alerts-panel-list">
+                        <div class="alert-item info"><div class="alert-content">Loading...</div></div>
                     </div>
                 </div>
             </div>
@@ -708,5 +647,73 @@ try {
             showNotification('Dashboard loaded successfully', 'success');
         });
     </script>
+        <script>
+        // Load dynamic activity feed
+        function renderActivityItem(item) {
+            let icon = '<i class="fas fa-info-circle"></i>';
+            let iconClass = 'system';
+            let text = '';
+            let details = '';
+            let time = '';
+            if (item.type === 'incident') {
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                iconClass = 'emergency';
+                text = `${item.event_type.charAt(0).toUpperCase() + item.event_type.slice(1)} Incident Reported`;
+                details = `${item.location_address || 'Unknown location'} • Priority: ${item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'N/A'}`;
+                time = timeAgo(item.created_at);
+            } else if (item.type === 'dispatch') {
+                icon = '<i class="fas fa-truck-medical"></i>';
+                iconClass = 'response';
+                text = `${item.unit_identifier || 'Unit'} Dispatched`;
+                details = `To incident #${item.incident_id} • ${item.unit_type || ''}`;
+                time = timeAgo(item.created_at);
+            }
+            return `<div class="activity-item"><div class="activity-icon ${iconClass}">${icon}</div><div class="activity-content"><div class="activity-text">${text}</div><div class="activity-details">${details}</div><div class="activity-time">${time}</div></div></div>`;
+        }
+        function loadActivityFeed() {
+            fetch('api/activity_feed.php').then(r=>r.json()).then(data => {
+                const el = document.getElementById('activity-feed-list');
+                if (!data.ok || !data.data.length) {
+                    el.innerHTML = '<div class="activity-item"><div class="activity-content">No recent activity.</div></div>';
+                    return;
+                }
+                el.innerHTML = data.data.map(renderActivityItem).join('');
+            });
+        }
+        // Load dynamic alerts
+        function renderAlertItem(alert) {
+            let icon = '<i class="fas fa-info-circle"></i>';
+            let iconClass = 'info';
+            if (alert.type === 'critical') { icon = '<i class="fas fa-exclamation-circle"></i>'; iconClass = 'critical'; }
+            else if (alert.type === 'warning') { icon = '<i class="fas fa-exclamation-triangle"></i>'; iconClass = 'warning'; }
+            return `<div class="alert-item ${iconClass}"><div class="alert-icon ${iconClass}">${icon}</div><div class="alert-content"><div class="alert-text">${alert.title}</div><div class="alert-details">${alert.details}</div></div></div>`;
+        }
+        function loadAlertsPanel() {
+            fetch('api/alerts_active.php').then(r=>r.json()).then(data => {
+                const el = document.getElementById('alerts-panel-list');
+                if (!data.ok || !data.data.length) {
+                    el.innerHTML = '<div class="alert-item info"><div class="alert-content">No active alerts.</div></div>';
+                    return;
+                }
+                el.innerHTML = data.data.map(renderAlertItem).join('');
+            });
+        }
+        // Helper: time ago
+        function timeAgo(dateStr) {
+            const now = new Date();
+            const then = new Date(dateStr);
+            const diff = Math.floor((now - then) / 1000);
+            if (diff < 60) return diff + ' seconds ago';
+            if (diff < 3600) return Math.floor(diff/60) + ' minutes ago';
+            if (diff < 86400) return Math.floor(diff/3600) + ' hours ago';
+            return then.toLocaleString();
+        }
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('Dashboard loaded successfully', 'success');
+            loadActivityFeed();
+            loadAlertsPanel();
+        });
+        </script>
 </body>
 </html>

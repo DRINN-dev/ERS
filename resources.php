@@ -145,207 +145,219 @@ try {
             </div>
 
             <!-- Resource Tabs -->
-            <div class="resource-tabs">
-                <button class="resource-tab active" onclick="switchResourceTab('vehicles')">Vehicles</button>
-                <button class="resource-tab" onclick="switchResourceTab('personnel')">Personnel</button>
-                <button class="resource-tab" onclick="switchResourceTab('equipment')">Equipment</button>
-            </div>
+            <!-- Combined Resources Table -->
+            <div class="resources-table-section" style="margin-top:2rem;">
+                <h2 style="font-size: 1.2rem; font-weight: 700; color: #333; margin-bottom: 1rem; display: flex; align-items: center;">
+                    <i class="fas fa-table" style="margin-right: 0.5rem; color: #007bff;"></i>
+                    All Resources
+                </h2>
+                <div style="overflow-x:auto;">
+                <style>
+                .resource-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 1.08rem;
+                }
+                .resource-table th, .resource-table td {
+                    padding: 0.85em 1.1em;
+                    border: 1px solid #e0e0e0;
+                    text-align: left;
+                }
+                .resource-table th {
+                    background: #f7f7f7;
+                    font-size: 1.13rem;
+                }
+                .resource-table tr.resource-row-vehicle { background: #eafaf1; }
+                .resource-table tr.resource-row-personnel { background: #fffbe7; }
+                .resource-table tr.resource-row-equipment { background: #f9eaf6; }
+                .resource-status-available {
+                    background: #d4edda;
+                    color: #218838;
+                    font-weight: 600;
+                    border-radius: 16px;
+                    padding: 0.3em 1em;
+                    font-size: 0.98em;
+                    display: inline-block;
+                }
+                .resource-status-inuse {
+                    background: #fff3cd;
+                    color: #856404;
+                    font-weight: 600;
+                    border-radius: 16px;
+                    padding: 0.3em 1em;
+                    font-size: 0.98em;
+                    display: inline-block;
+                }
+                .resource-status-offline {
+                    background: #f8d7da;
+                    color: #721c24;
+                    font-weight: 600;
+                    border-radius: 16px;
+                    padding: 0.3em 1em;
+                    font-size: 0.98em;
+                    display: inline-block;
+                }
+                .resource-action-btn {
+                    border: none;
+                    border-radius: 6px;
+                    padding: 0.5em 1.1em;
+                    font-weight: 600;
+                    margin-right: 0.3em;
+                    font-size: 0.98em;
+                    cursor: pointer;
+                    transition: background 0.2s, color 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4em;
+                    background: #fff;
+                    color: #111;
+                }
+                .resource-action-btn:hover {
+                    background: #111;
+                    color: #fff;
+                }
+                </style>
+                <table class="resource-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name/Description</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Details</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resource-list-dynamic">
+                        <!-- Table will be rendered here by JS -->
+                    </tbody>
+                </table>
+                <script>
+                // Resource data (should be fetched from backend in production)
+                let RESOURCES = [
+                    {
+                        type: 'vehicles',
+                        name: 'Ambulance #5',
+                        status: 'available',
+                        location: 'Station 1',
+                        details: 'Idle, Ready',
+                        icon: '<i class="fas fa-ambulance" style="color:#dc3545;"></i>',
+                        actions: ['deploy','track','service','details']
+                    },
+                    {
+                        type: 'vehicles',
+                        name: 'Police Unit #8',
+                        status: 'inuse',
+                        location: 'Downtown',
+                        details: 'En Route',
+                        icon: '<i class="fas fa-car" style="color:#007bff;"></i>',
+                        actions: ['deploy','track','service','details']
+                    },
+                    {
+                        type: 'personnel',
+                        name: 'Dr. Sarah Johnson',
+                        status: 'available',
+                        location: 'Station',
+                        details: 'Shift: Day<br>Level: Senior',
+                        icon: '<i class="fas fa-user-md" style="color:#28a745;"></i>',
+                        actions: ['contact','schedule','details'],
+                        role: 'Paramedic'
+                    },
+                    {
+                        type: 'personnel',
+                        name: 'Officer Mike Davis',
+                        status: 'inuse',
+                        location: 'Downtown Patrol',
+                        details: 'Shift: Night<br>Level: Veteran',
+                        icon: '<i class="fas fa-shield-alt" style="color:#ffc107;"></i>',
+                        actions: ['contact','schedule','details'],
+                        role: 'Police Officer'
+                    },
+                    {
+                        type: 'equipment',
+                        name: 'Defibrillator Unit',
+                        status: 'available',
+                        location: 'Ambulance',
+                        details: 'Charge: Full<br>Status: Calibrated',
+                        icon: '<i class="fas fa-heartbeat" style="color:#e83e8c;"></i>',
+                        actions: ['assign','check','calibrate','details'],
+                        role: 'Medical Equipment'
+                    }
+                ];
 
-            <!-- Vehicles Tab -->
-            <div id="vehicles" class="resource-tab-content active">
-                <div class="resources-grid">
-                    <div class="resource-card available" data-type="vehicles" data-status="available">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Ambulance #5</h3>
-                            <span class="resource-status status-available">Available</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Station 1</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-tachometer-alt"></i></span>
-                                <span class="detail-value">Idle</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-clock"></i></span>
-                                <span class="detail-value">Idle</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource" onclick="deployResource(this)">
-                                <i class="fas fa-play"></i> Deploy
-                            </button>
-                            <button class="btn-resource" onclick="trackResource(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-resource" onclick="serviceResource(this)">
-                                <i class="fas fa-wrench"></i> Service
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
+                // Filter elements
+                const typeFilter = document.getElementById('resource-type');
+                const statusFilter = document.getElementById('status-filter');
+                const locationFilter = document.getElementById('location-filter');
+                const searchInput = document.getElementById('search-resource');
 
-                    <div class="resource-card inuse" data-type="vehicles" data-status="inuse">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Police Unit #8</h3>
-                            <span class="resource-status status-inuse">In Use</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Downtown</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-tachometer-alt"></i></span>
-                                <span class="detail-value">En Route</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-clock"></i></span>
-                                <span class="detail-value">En Route</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource active" onclick="deployResource(this)">
-                                <i class="fas fa-play"></i> Deploy
-                            </button>
-                            <button class="btn-resource" onclick="trackResource(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-resource" onclick="serviceResource(this)">
-                                <i class="fas fa-wrench"></i> Service
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
+                function passFilters(r) {
+                    const typeValue = (typeFilter.value || '').toLowerCase();
+                    const statusValue = (statusFilter.value || '').toLowerCase();
+                    const locationValue = (locationFilter.value || '').toLowerCase();
+                    const searchValue = (searchInput.value || '').toLowerCase();
 
-                </div>
-            </div>
+                    if (typeValue && (r.type || '').toLowerCase() !== typeValue) return false;
+                    if (statusValue && (r.status || '').toLowerCase() !== statusValue) return false;
+                    if (locationValue && (r.location || '').toLowerCase() !== locationValue) return false;
+                    if (searchValue) {
+                        const hay = [r.name, r.details, r.location, r.role]
+                            .map(v => (v || '').toString().toLowerCase()).join(' ');
+                        if (!hay.includes(searchValue)) return false;
+                    }
+                    return true;
+                }
 
-            <!-- Personnel Tab -->
-            <div id="personnel" class="resource-tab-content">
-                <div class="resources-grid">
-                    <div class="resource-card available" data-type="personnel" data-status="available">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Dr. Sarah Johnson</h3>
-                            <span class="resource-status status-available">Available</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-user-md"></i></span>
-                                <span class="detail-value">Paramedic</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Station</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-clock"></i></span>
-                                <span class="detail-value">Shift</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-star"></i></span>
-                                <span class="detail-value">Senior</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource" onclick="contactPersonnel(this)">
-                                <i class="fas fa-phone"></i> Contact
-                            </button>
-                            <button class="btn-resource" onclick="personnelSchedule(this)">
-                                <i class="fas fa-calendar"></i> Schedule
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
+                function resourceRowHtml(r) {
+                    let rowClass = r.type === 'vehicles' ? 'resource-row-vehicle' : (r.type === 'personnel' ? 'resource-row-personnel' : 'resource-row-equipment');
+                    let statusClass = r.status === 'available' ? 'resource-status-available' : (r.status === 'inuse' ? 'resource-status-inuse' : 'resource-status-offline');
+                    let statusLabel = r.status === 'available' ? 'Available' : (r.status === 'inuse' ? 'In Use' : 'Offline');
+                    let actionsHtml = '';
+                    if (r.actions.includes('deploy')) actionsHtml += `<button class=\"resource-action-btn deploy\" onclick=\"deployResource(this)\"><i class=\"fas fa-play\"></i> Deploy</button>`;
+                    if (r.actions.includes('track')) actionsHtml += `<button class=\"resource-action-btn track\" onclick=\"trackResource(this)\"><i class=\"fas fa-location-arrow\"></i> Track</button>`;
+                    if (r.actions.includes('service')) actionsHtml += `<button class=\"resource-action-btn service\" onclick=\"serviceResource(this)\"><i class=\"fas fa-wrench\"></i> Service</button>`;
+                    if (r.actions.includes('details')) actionsHtml += `<button class=\"resource-action-btn details\" onclick=\"resourceDetails(this)\"><i class=\"fas fa-info-circle\"></i> Details</button>`;
+                    if (r.actions.includes('contact')) actionsHtml += `<button class=\"resource-action-btn contact\" onclick=\"contactPersonnel(this)\"><i class=\"fas fa-phone\"></i> Contact</button>`;
+                    if (r.actions.includes('schedule')) actionsHtml += `<form style=\"display:inline;\" onsubmit=\"event.preventDefault(); openScheduleModal('${r.name}');\"><button type=\"submit\" class=\"resource-action-btn schedule\"><i class=\"fas fa-calendar\"></i> Schedule</button></form>`;
+                    if (r.actions.includes('assign')) actionsHtml += `<button class=\"resource-action-btn assign\" onclick=\"assignEquipment(this)\"><i class=\"fas fa-link\"></i> Assign</button>`;
+                    if (r.actions.includes('check')) actionsHtml += `<button class=\"resource-action-btn check\" onclick=\"checkEquipment(this)\"><i class=\"fas fa-check-circle\"></i> Check</button>`;
+                    if (r.actions.includes('calibrate')) actionsHtml += `<button class=\"resource-action-btn calibrate\" onclick=\"calibrateEquipment(this)\"><i class=\"fas fa-tools\"></i> Calibrate</button>`;
+                    return `<tr class=\"${rowClass}\" data-type=\"${r.type}\" data-status=\"${r.status}\" data-location=\"${r.location}\">\n`+
+                        `<td>${r.icon} ${r.type.charAt(0).toUpperCase() + r.type.slice(1)}</td>`+
+                        `<td class=\"resource-title\">${r.name}${r.role ? ' <br><span style=\\"font-size:0.95em;color:#888;\\">'+r.role+'</span>' : ''}</td>`+
+                        `<td><span class=\"${statusClass}\">${statusLabel}</span></td>`+
+                        `<td class=\"detail-value\">${r.location}</td>`+
+                        `<td>${r.details}</td>`+
+                        `<td>${actionsHtml}</td>`+
+                    `</tr>`;
+                }
 
-                    <div class="resource-card inuse" data-type="personnel" data-status="inuse">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Officer Mike Davis</h3>
-                            <span class="resource-status status-inuse">On Duty</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-shield-alt"></i></span>
-                                <span class="detail-value">Police Officer</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Downtown Patrol</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-clock"></i></span>
-                                <span class="detail-value">On duty</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-star"></i></span>
-                                <span class="detail-value">Veteran</span>
-                            </div>
-                        </div>
-                            <button class="btn-resource" onclick="contactPersonnel(this)">
-                                <i class="fas fa-phone"></i> Contact
-                            </button>
-                            <button class="btn-resource" onclick="personnelSchedule(this)">
-                                <i class="fas fa-calendar"></i> Schedule
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                function renderDynamicResources() {
+                    const container = document.getElementById('resource-list-dynamic');
+                    if (!container) return;
+                    const filtered = RESOURCES.filter(passFilters);
+                    if (!filtered.length) {
+                        container.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">No resources found.</td></tr>';
+                    } else {
+                        container.innerHTML = filtered.map(resourceRowHtml).join('');
+                    }
+                }
 
-            <!-- Equipment Tab -->
-            <div id="equipment" class="resource-tab-content">
-                <div class="resources-grid">
-                    <div class="resource-card available" data-type="equipment" data-status="available">
-                        <div class="resource-header">
-                            <h3 class="resource-title">Defibrillator Unit</h3>
-                            <span class="resource-status status-available">Available</span>
-                        </div>
-                        <div class="resource-details">
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-heartbeat"></i></span>
-                                <span class="detail-value">Medical Equipment</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-map-marker-alt"></i></span>
-                                <span class="detail-value">Ambulance</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-battery-full"></i></span>
-                                <span class="detail-value">Charge</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label"><i class="fas fa-calendar"></i></span>
-                                <span class="detail-value">Calibrated</span>
-                            </div>
-                        </div>
-                        <div class="resource-actions">
-                            <button class="btn-resource" onclick="assignEquipment(this)">
-                                <i class="fas fa-link"></i> Assign
-                            </button>
-                            <button class="btn-resource" onclick="checkEquipment(this)">
-                                <i class="fas fa-check-circle"></i> Check
-                            </button>
-                            <button class="btn-resource" onclick="calibrateEquipment(this)">
-                                <i class="fas fa-tools"></i> Calibrate
-                            </button>
-                            <button class="btn-resource" onclick="resourceDetails(this)">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        </div>
-                    </div>
+                function applyFilters() {
+                    renderDynamicResources();
+                }
 
-                </div>
+                // Add event listeners to filters
+                typeFilter.addEventListener('change', applyFilters);
+                statusFilter.addEventListener('change', applyFilters);
+                locationFilter.addEventListener('change', applyFilters);
+                searchInput.addEventListener('input', applyFilters);
+
+                // Initial render
+                document.addEventListener('DOMContentLoaded', function() {
+                    renderDynamicResources();
+                });
+                </script>
             </div>
 
             <!-- AI-Powered Predictive Analytics -->
@@ -411,7 +423,12 @@ try {
                     <div id="vehicle-fields">
                         <div class="form-group">
                             <label for="request-resource-name">Resource Name/Description <span class="required">*</span></label>
-                            <input type="text" id="request-resource-name" name="resource_name" placeholder="e.g., Ambulance, Fire Truck" required>
+                            <select id="request-resource-name" name="resource_name" required>
+                                <option value="">Select Resource</option>
+                                <option value="Fire Truck">Fire Truck</option>
+                                <option value="Ambulance">Ambulance</option>
+                                <option value="Police">Police</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="request-quantity">Quantity <span class="required">*</span></label>
@@ -484,10 +501,80 @@ try {
         </div>
     </div>
 
-    <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+
+    <!-- Emergency Personnel Scheduling Modal -->
+    <div class="resource-request-modal" id="scheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Schedule Emergency Personnel</h3>
+                <button class="modal-close" onclick="closeScheduleModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="scheduleForm" onsubmit="submitScheduleForm(event)">
+                    <div class="form-group">
+                        <label for="schedule-personnel-name">Personnel Name</label>
+                        <input type="text" id="schedule-personnel-name" name="personnel_name" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule-date">Date <span class="required">*</span></label>
+                        <input type="date" id="schedule-date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule-shift">Shift <span class="required">*</span></label>
+                        <select id="schedule-shift" name="shift" required>
+                            <option value="">Select Shift</option>
+                            <option value="day">Day</option>
+                            <option value="night">Night</option>
+                            <option value="on-call">On-call</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule-notes">Notes</label>
+                        <textarea id="schedule-notes" name="notes" rows="2" placeholder="Special instructions or emergency details..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel" onclick="closeScheduleModal()">Cancel</button>
+                        <button type="submit" class="btn-submit">Schedule</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script>
+        // Scheduling Modal Logic
+        function openScheduleModal(personnelName) {
+            document.getElementById('schedule-personnel-name').value = personnelName;
+            document.getElementById('scheduleModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('show');
+            document.body.style.overflow = '';
+            document.getElementById('scheduleForm').reset();
+        }
+        function submitScheduleForm(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            showNotification(`Scheduled ${data.personnel_name} for ${data.shift} shift on ${data.date}`, 'success');
+            setTimeout(() => { closeScheduleModal(); }, 1500);
+            // In production, send data to backend here
+        }
+        // Close modal on outside click or Escape
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('scheduleModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) closeScheduleModal();
+                });
+            }
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('show')) closeScheduleModal();
+            });
+        });
                 // Update form fields based on resource type
                 function updateResourceFormFields() {
                     var type = document.getElementById('request-resource-type').value;
@@ -758,24 +845,21 @@ try {
         }
 
         function resourceReport() {
-            showNotification('Generating comprehensive resource report...', 'info');
-            
-            // In production, this would generate and download a report
+            showNotification('Generating resource report, please wait...', 'info');
             fetch('api/reports_resources.php')
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
                 .then(html => {
-                    // Create a new window with the report
                     const reportWindow = window.open('', '_blank');
                     reportWindow.document.write(html);
                     reportWindow.document.close();
                     showNotification('Resource report generated and opened in new window', 'success');
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('Report generation initiated (simulated)', 'info');
-                    setTimeout(() => {
-                        showNotification('Resource report generated and downloaded', 'success');
-                    }, 2000);
+                    console.error('Error generating report:', error);
+                    showNotification('Failed to generate resource report. Please try again.', 'error');
                 });
         }
 

@@ -119,6 +119,8 @@ $pageTitle = 'Incident Priority Management';
                     Logged Incidents
                 </h2>
                 <div id="incident-list-dynamic"></div>
+                <!-- Table will be rendered here by JS -->
+                <div id="incident-list-dynamic"></div>
             </div>
 
             <!-- AI-Powered Incident Analysis -->
@@ -199,24 +201,64 @@ $pageTitle = 'Incident Priority Management';
         });
 
         // Resolve incident functionality
-        document.querySelectorAll('.btn-action .fa-check').forEach(icon => {
-            icon.parentElement.addEventListener('click', function() {
-                const incidentCard = this.closest('.incident-card');
-                const incidentTitle = incidentCard.querySelector('.incident-title').textContent;
 
-                if (confirm(`Are you sure you want to resolve the incident: "${incidentTitle}"?`)) {
-                    // Change status to resolved
-                    const statusBadge = incidentCard.querySelector('.status-badge');
-                    statusBadge.className = 'status-badge status-resolved';
-                    statusBadge.textContent = 'Resolved';
+        // Event delegation for all action buttons in the table
+        document.addEventListener('click', function(e) {
+            // Find the button and row
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const tr = btn.closest('tr');
+            if (!tr || !tr.hasAttribute('data-ref')) return;
+            const ref = tr.getAttribute('data-ref');
+            const incident = INCIDENTS.find(i => (i.incident_code || i.reference_no || '') == ref);
+            if (!incident) return;
 
-                    // Add resolved styling
-                    incidentCard.style.opacity = '0.7';
-                    incidentCard.style.borderLeftColor = '#28a745';
+            // Priority button
+            if (btn.classList.contains('btn-priority')) {
+                // Cycle through priorities: high -> medium -> low -> high
+                let current = (incident.priority || 'low').toLowerCase();
+                let newPriority = current === 'high' ? 'medium' : (current === 'medium' ? 'low' : 'high');
+                incident.priority = newPriority;
+                renderDynamicIncidents();
+                showNotification(`Incident priority changed to ${newPriority.toUpperCase()}`, 'success');
+                return;
+            }
 
+            // Update button
+            if (btn.querySelector('.fa-edit')) {
+                showUpdateModal(incident);
+                return;
+            }
+
+            // Contact button
+            if (btn.querySelector('.fa-phone')) {
+                // Try to get a phone number from incident (if available)
+                let phone = '';
+                if (incident.caller_phone) phone = incident.caller_phone;
+                else if (incident.contact) phone = incident.contact;
+                else if (incident.description) {
+                    const match = incident.description.match(/(\+?\d{1,3}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4})/);
+                    if (match) phone = match[1];
+                }
+                if (phone) {
+                    if (confirm(`Call ${phone}?`)) {
+                        showNotification(`Initiating call to ${phone}`, 'info');
+                    }
+                } else {
+                    showNotification('Phone number not found', 'error');
+                }
+                return;
+            }
+
+            // Resolve button
+            if (btn.querySelector('.fa-check')) {
+                if (confirm('Are you sure you want to resolve this incident?')) {
+                    incident.status = 'resolved';
+                    renderDynamicIncidents();
                     showNotification('Incident marked as resolved', 'success');
                 }
-            });
+                return;
+            }
         });
 
         // Contact functionality
@@ -309,13 +351,14 @@ $pageTitle = 'Incident Priority Management';
 
         // Update statistics
         function updateStats() {
-            const cards = Array.from(document.querySelectorAll('#incident-list-dynamic .incident-card'))
-                .filter(card => card.style.display !== 'none');
+            // Count based on currently filtered incidents
+            const filtered = INCIDENTS.filter(passFilters);
             let highCount = 0, mediumCount = 0, lowCount = 0;
-            cards.forEach(card => {
-                if (card.classList.contains('priority-high')) highCount++;
-                else if (card.classList.contains('priority-medium')) mediumCount++;
-                else if (card.classList.contains('priority-low')) lowCount++;
+            filtered.forEach(i => {
+                const p = (i.priority || 'low').toLowerCase();
+                if (p === 'high') highCount++;
+                else if (p === 'medium') mediumCount++;
+                else lowCount++;
             });
             document.querySelector('.stats-content h3').textContent = highCount;
             document.querySelectorAll('.stats-content h3')[1].textContent = mediumCount;
@@ -335,42 +378,24 @@ $pageTitle = 'Incident Priority Management';
             const priority = (i.priority || 'low').toLowerCase();
             const statusInfo = mapStatusToBadge(i.status);
             const created = new Date(i.created_at || Date.now());
-            const title = `${capitalize(i.type)} Incident`;
             const location = i.location || i.location_address || 'Unknown location';
             const ref = i.incident_code || i.reference_no || '';
             return `
-                <div class="incident-card priority-${priority}" data-ref="${ref}">
-                    <div class="incident-header">
-                        <div>
-                            <h3 class="incident-title">${title} ${ref ? `- ${ref}` : ''}</h3>
-                            <div class="incident-meta">
-                                <span><i class="fas fa-clock"></i> ${created.toLocaleString()}</span>
-                                <span><i class="fas fa-map-marker-alt"></i> ${location}</span>
-                                <span class="status-badge ${statusInfo.cls}">${statusInfo.label}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="incident-details">
-                        <div class="detail-item">
-                            <span class="detail-label">Type</span>
-                            <span class="detail-value">${capitalize(i.type)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Priority</span>
-                            <span class="detail-value">${capitalize(priority)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Description</span>
-                            <span class="detail-value">${(i.description || '').substring(0, 120)}${(i.description||'').length>120?'...':''}</span>
-                        </div>
-                    </div>
-                    <div class="incident-actions">
+                <tr class="priority-${priority}" data-ref="${ref}">
+                    <td>${ref}</td>
+                    <td>${capitalize(i.type)}</td>
+                    <td>${capitalize(priority)}</td>
+                    <td>${(i.description || '').substring(0, 60)}${(i.description||'').length>60?'...':''}</td>
+                    <td><span class="status-badge ${statusInfo.cls}">${statusInfo.label}</span></td>
+                    <td>${location}</td>
+                    <td>${created.toLocaleString()}</td>
+                    <td>
                         <button class="btn-priority btn-${priority}">${capitalize(priority)} Priority</button>
-                        <button class="btn-action"><i class="fas fa-edit"></i> Update</button>
-                        <button class="btn-action"><i class="fas fa-phone"></i> Contact</button>
-                        <button class="btn-action"><i class="fas fa-check"></i> Resolve</button>
-                    </div>
-                </div>
+                        <button class="btn-action"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action"><i class="fas fa-phone"></i></button>
+                        <button class="btn-action"><i class="fas fa-check"></i></button>
+                    </td>
+                </tr>
             `;
         }
 
@@ -405,7 +430,43 @@ $pageTitle = 'Incident Priority Management';
             if (!filtered.length) {
                 container.innerHTML = '<div class="incident-card empty">No incidents yet. Logged calls will appear here.</div>';
             } else {
-                container.innerHTML = filtered.map(incidentCardHtml).join('');
+                let table = `<style>
+                    .incident-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 1.08rem;
+                    }
+                    .incident-table th, .incident-table td {
+                        padding: 0.85em 1.1em;
+                        border: 1px solid #e0e0e0;
+                        text-align: left;
+                    }
+                    .incident-table th {
+                        background: #f7f7f7;
+                        font-size: 1.13rem;
+                    }
+                    .incident-table tr:nth-child(even) {
+                        background: #fafbfc;
+                    }
+                </style>
+                <table class=\"incident-table\">
+                    <thead>
+                        <tr>
+                            <th>Reference No</th>
+                            <th>Type</th>
+                            <th>Priority</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Date/Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(incidentCardHtml).join('')}
+                    </tbody>
+                </table>`;
+                container.innerHTML = table;
             }
             updateStats();
         }
@@ -510,6 +571,91 @@ $pageTitle = 'Incident Priority Management';
             if (REFRESH_TIMER) clearInterval(REFRESH_TIMER);
             REFRESH_TIMER = setInterval(fetchIncidents, 10000); // refresh every 10s
         });
+
+        // Modal for updating incident description
+        function showUpdateModal(incident) {
+            let modal = document.getElementById('incident-update-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'incident-update-modal';
+                modal.innerHTML = `
+                    <div class="modal-backdrop"></div>
+                    <div class="modal-content">
+                        <h3>Update Incident Details</h3>
+                        <form id="modal-update-form">
+                            <label>Type<br>
+                                <input id="modal-type-input" type="text" required style="width:100%">
+                            </label><br><br>
+                            <label>Priority<br>
+                                <select id="modal-priority-input" required style="width:100%">
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </label><br><br>
+                            <label>Description<br>
+                                <textarea id="modal-desc-input" rows="4" required style="width:100%"></textarea>
+                            </label><br><br>
+                            <label>Location<br>
+                                <input id="modal-location-input" type="text" style="width:100%">
+                            </label><br><br>
+                            <label>Status<br>
+                                <select id="modal-status-input" style="width:100%">
+                                    <option value="active">Active</option>
+                                    <option value="dispatched">Dispatched</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
+                            </label><br><br>
+                            <div style="margin-top:1em;text-align:right;">
+                                <button type="button" id="modal-cancel-btn" style="margin-right:0.5em;">Cancel</button>
+                                <button type="submit" id="modal-save-btn">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                // Add styles
+                const style = document.createElement('style');
+                style.textContent = `
+                    #incident-update-modal { position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2000;display:flex;align-items:center;justify-content:center; }
+                    #incident-update-modal .modal-backdrop { position:absolute;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35); }
+                    #incident-update-modal .modal-content { position:relative;z-index:1;background:#fff;padding:2em 1.5em;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);min-width:320px;max-width:95vw; }
+                    #incident-update-modal h3 { margin-top:0; }
+                    #incident-update-modal textarea, #incident-update-modal input, #incident-update-modal select { border:1px solid #ccc;border-radius:6px;padding:0.7em; font-size:1em; }
+                    #incident-update-modal button { padding:0.5em 1.2em;font-size:1em;border-radius:6px;border:none;cursor:pointer; }
+                    #modal-save-btn { background:#007bff;color:#fff; }
+                    #modal-cancel-btn { background:#eee;color:#333; }
+                    #modal-save-btn:hover { background:#0056b3; }
+                    #modal-cancel-btn:hover { background:#ccc; }
+                `;
+                document.head.appendChild(style);
+            }
+            modal.style.display = 'flex';
+            document.getElementById('modal-type-input').value = incident.type || '';
+            document.getElementById('modal-priority-input').value = (incident.priority || 'low').toLowerCase();
+            document.getElementById('modal-desc-input').value = incident.description || '';
+            document.getElementById('modal-location-input').value = incident.location || incident.location_address || '';
+            document.getElementById('modal-status-input').value = (incident.status || 'active').toLowerCase();
+
+            // Cancel button
+            document.getElementById('modal-cancel-btn').onclick = function() {
+                modal.style.display = 'none';
+            };
+            // Save button (form submit)
+            document.getElementById('modal-update-form').onsubmit = function(e) {
+                e.preventDefault();
+                incident.type = document.getElementById('modal-type-input').value;
+                incident.priority = document.getElementById('modal-priority-input').value;
+                incident.description = document.getElementById('modal-desc-input').value;
+                let loc = document.getElementById('modal-location-input').value;
+                if (incident.location !== undefined) incident.location = loc;
+                else if (incident.location_address !== undefined) incident.location_address = loc;
+                incident.status = document.getElementById('modal-status-input').value;
+                renderDynamicIncidents();
+                showNotification('Incident updated successfully', 'success');
+                modal.style.display = 'none';
+            };
+        }
     </script>
 
     <script>

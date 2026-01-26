@@ -384,7 +384,11 @@ $pageTitle = 'Emergency Call Center';
             });
             const data = await res.json();
             if (!data.ok) {
-                alert('Failed to log incident.');
+                if (data.error && data.error === 'Duplicate incident detected') {
+                    alert('Duplicate incident detected!\nA similar incident was already reported recently.');
+                } else {
+                    alert('Failed to log incident.');
+                }
                 return;
             }
             showToast('Incident logged successfully');

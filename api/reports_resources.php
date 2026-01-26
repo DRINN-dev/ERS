@@ -4,9 +4,26 @@ require_once __DIR__ . '/../includes/db.php';
 $pdo = get_db_connection();
 if (!$pdo) { http_response_code(500); echo 'Database connection unavailable'; exit; }
 
+
 $unitStatuses = ['available'=>0,'assigned'=>0,'enroute'=>0,'on_scene'=>0,'unavailable'=>0,'maintenance'=>0];
 $resStatuses = ['available'=>0,'deployed'=>0,'maintenance'=>0,'out_of_service'=>0];
 $staffStatuses = ['available'=>0,'on_duty'=>0,'off_duty'=>0,'leave'=>0];
+
+// KPIs matching dashboard logic
+$totalVehicles = 0;
+$activePersonnel = 0;
+$equipmentItems = 0;
+try {
+    // Total vehicles (units not in maintenance)
+    $qv = $pdo->query("SELECT COUNT(*) AS c FROM units WHERE status != 'maintenance'");
+    $totalVehicles = (int)($qv->fetch()['c'] ?? 0);
+    // Active personnel (staff on duty or available)
+    $qp = $pdo->query("SELECT COUNT(*) AS c FROM staff WHERE status IN ('available','on_duty')");
+    $activePersonnel = (int)($qp->fetch()['c'] ?? 0);
+    // Equipment items (resources of type equipment and not in maintenance)
+    $qe = $pdo->query("SELECT COUNT(*) AS c FROM resources WHERE type = 'equipment' AND status != 'maintenance'");
+    $equipmentItems = (int)($qe->fetch()['c'] ?? 0);
+} catch (Throwable $e) {}
 
 try {
     $q1 = $pdo->query("SELECT status, COUNT(*) c FROM units GROUP BY status");
@@ -54,7 +71,11 @@ $util = $totalUnits>0 ? round(($busyUnits/$totalUnits)*100,1) : 0.0;
     <div class="sub">Live snapshot of units, resources, and staff</div>
     <div class="toolbar"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
 
+
     <div class="grid">
+        <div class="card"><div class="muted">Total Vehicles</div><div class="kpi"><?php echo (int)$totalVehicles; ?></div></div>
+        <div class="card"><div class="muted">Active Personnel</div><div class="kpi"><?php echo (int)$activePersonnel; ?></div></div>
+        <div class="card"><div class="muted">Equipment Items</div><div class="kpi"><?php echo (int)$equipmentItems; ?></div></div>
         <div class="card"><div class="muted">Utilization (Units Busy)</div><div class="kpi"><?php echo number_format($util,1); ?>%</div></div>
         <div class="card"><div class="muted">Total Units</div><div class="kpi"><?php echo (int)$totalUnits; ?></div></div>
         <div class="card"><div class="muted">Busy Units</div><div class="kpi"><?php echo (int)$busyUnits; ?></div></div>

@@ -386,52 +386,78 @@ try {
                     <i class="fas fa-bell" style="margin-right: 0.5rem; color: #ffc107;"></i>
                     System Alerts & Notifications
                 </h2>
+                <div id="alerts-dynamic"></div>
+            </div>
+    <script>
+    // --- Dynamic Alerts & Notifications ---
+    let LAST_ALERTS = [];
+    async function fetchAlerts() {
+        try {
+            const res = await fetch('api/alerts_active.php');
+            const data = await res.json();
+            if (!data.ok) return [];
+            return data.data || [];
+        } catch (e) { return []; }
+    }
 
-                <div class="alert-item critical">
-                    <div class="alert-info">
-                        <div class="alert-title">High Response Time Alert</div>
-                        <div class="alert-details">Average response time exceeded 10 minutes in Zone 3 • 15 minutes ago</div>
-                    </div>
-                    <div class="alert-actions">
-                        <button class="btn-report" onclick="investigateAlert()">
-                            <i class="fas fa-search"></i> Investigate
-                        </button>
-                        <button class="btn-report" onclick="dismissAlert()">
-                            <i class="fas fa-times"></i> Dismiss
-                        </button>
-                    </div>
+    function alertHtml(alert, idx) {
+        let icon = '<i class="fas fa-info-circle"></i>';
+        let cls = '';
+        if (alert.type === 'critical') { icon = '<i class="fas fa-exclamation-triangle"></i>'; cls = 'critical'; }
+        else if (alert.type === 'warning') { icon = '<i class="fas fa-exclamation-circle"></i>'; cls = 'warning'; }
+        else if (alert.type === 'info') { icon = '<i class="fas fa-info-circle"></i>'; cls = 'info'; }
+        return `
+            <div class="alert-item ${cls}" data-alert-idx="${idx}">
+                <div class="alert-info">
+                    <div class="alert-title">${icon} ${alert.title || 'Alert'}</div>
+                    <div class="alert-details">${alert.details || ''}</div>
                 </div>
-
-                <div class="alert-item warning">
-                    <div class="alert-info">
-                        <div class="alert-title">Resource Utilization Warning</div>
-                        <div class="alert-details">Ambulance fleet utilization at 85% • Consider additional staffing</div>
-                    </div>
-                    <div class="alert-actions">
-                        <button class="btn-report" onclick="viewResourceDetails()">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-report" onclick="dismissAlert()">
-                            <i class="fas fa-times"></i> Dismiss
-                        </button>
-                    </div>
-                </div>
-
-                <div class="alert-item">
-                    <div class="alert-info">
-                        <div class="alert-title">Monthly Report Generated</div>
-                        <div class="alert-details">December performance report is ready for review • 2 hours ago</div>
-                    </div>
-                    <div class="alert-actions">
-                        <button class="btn-report primary" onclick="viewMonthlyReport()">
-                            <i class="fas fa-eye"></i> View Report
-                        </button>
-                        <button class="btn-report" onclick="dismissAlert()">
-                            <i class="fas fa-times"></i> Dismiss
-                        </button>
-                    </div>
+                <div class="alert-actions">
+                    <button class="btn-report" onclick="dismissAlert(event)"><i class="fas fa-times"></i> Dismiss</button>
                 </div>
             </div>
+        `;
+    }
+
+    function showAlertPopup(alert) {
+        showNotification(`${alert.title}: ${alert.details}`, alert.type || 'info');
+    }
+
+    async function renderAlerts() {
+        const alerts = await fetchAlerts();
+        const container = document.getElementById('alerts-dynamic');
+        if (!container) return;
+        if (!alerts.length) {
+            container.innerHTML = '<div style="color:#888;padding:1em;">No active alerts at this time.</div>';
+        } else {
+            container.innerHTML = alerts.map(alertHtml).join('');
+        }
+        // Show popup for new alerts
+        if (LAST_ALERTS.length) {
+            alerts.forEach(a => {
+                if (!LAST_ALERTS.find(b => b.title === a.title && b.details === a.details)) {
+                    showAlertPopup(a);
+                }
+            });
+        } else {
+            alerts.forEach(showAlertPopup);
+        }
+        LAST_ALERTS = alerts;
+    }
+
+    // Dismiss alert (removes from UI only)
+    function dismissAlert(e) {
+        const item = e.target.closest('.alert-item');
+        if (item) item.style.display = 'none';
+        showNotification('Alert dismissed', 'info');
+    }
+
+    // Poll for new alerts every 10s
+    document.addEventListener('DOMContentLoaded', function() {
+        renderAlerts();
+        setInterval(renderAlerts, 10000);
+    });
+    </script>
 
         </div>
     </div>
@@ -458,7 +484,14 @@ try {
             const priorityLevel = document.getElementById('priority-level') ? document.getElementById('priority-level').value : '';
             const startDate = document.getElementById('start-date') ? document.getElementById('start-date').value : '';
             const endDate = document.getElementById('end-date') ? document.getElementById('end-date').value : '';
-            return { report_type: reportType, period: timePeriod, incident_type: incidentType, priority: priorityLevel, start_date: startDate, end_date: endDate };
+            // Use API param names: period, type, priority, start, end
+            const filters = {};
+            if (timePeriod) filters.period = timePeriod;
+            if (incidentType) filters.type = incidentType;
+            if (priorityLevel) filters.priority = priorityLevel;
+            if (startDate) filters.start = startDate;
+            if (endDate) filters.end = endDate;
+            return filters;
         }
 
         // Report generation functions
@@ -550,7 +583,7 @@ try {
             refreshCharts(currentFilters);
             loadRecentIncidents(currentFilters);
             setTimeout(() => {
-                showNotification(`Filters applied: ${(currentFilters.period || 'month')} | ${(currentFilters.incident_type || 'All Types')} | ${(currentFilters.priority || 'All Priorities')}`, 'success');
+                showNotification('Filters applied', 'success');
             }, 500);
         }
 
