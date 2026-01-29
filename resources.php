@@ -56,11 +56,8 @@ try {
     <div class="main-content">
         <div class="main-container">
 
-            <h1 style="font-size: 2rem; font-weight: 700; color: #333; margin-bottom: 2rem; display: flex; align-items: center;">
-                <i class="fas fa-truck" style="margin-right: 0.5rem; color: #dc3545;"></i>
-                Emergency Resources Status
-            </h1>
 
+            <div style="height: 3.5rem;"></div>
             <!-- Resource Overview -->
             <div class="resource-overview">
                 <div class="overview-card">

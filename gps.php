@@ -33,12 +33,9 @@ $pageTitle = 'GPS Tracking System';
     <div class="main-content">
         <div class="main-container">
 
-            <h1 style="font-size: 2rem; font-weight: 700; color: #333; margin-bottom: 2rem; display: flex; align-items: center;">
-                <i class="fas fa-map-marked-alt" style="margin-right: 0.5rem; color: #dc3545;"></i>
-                GPS Tracking System
-            </h1>
 
             <!-- Tracking Controls -->
+            <div style="height: 3.5rem;"></div>
             <div class="tracking-controls">
                 <h2 style="font-size: 1.25rem; font-weight: 700; color: #333; margin-bottom: 1.5rem; display: flex; align-items: center;">
                     <i class="fas fa-sliders-h" style="margin-right: 0.5rem; color: #007bff;"></i>
@@ -97,7 +94,7 @@ $pageTitle = 'GPS Tracking System';
                             </button>
                         </div>
                     </div>
-                    <div class="map-viewport" id="map" style="width:100%; height:100%;">
+                    <div class="map-viewport" id="map" style="width:100%;">
                         
                     </div>
                 </div>
@@ -106,106 +103,70 @@ $pageTitle = 'GPS Tracking System';
                 <div class="unit-panel">
                     <h3 style="font-size: 1.25rem; font-weight: 700; color: #333; margin-bottom: 1.5rem; display: flex; align-items: center;">
                         <i class="fas fa-truck" style="margin-right: 0.5rem; color: #28a745;"></i>
-                        Unit Status
+                        Unit Status & Dispatched
                     </h3>
-
-                    <div class="unit-card active" data-unit="ambulance-5">
-                        <div class="unit-header">
-                            <div>
-                                <h4 class="unit-name">Ambulance #5</h4>
-                                <span class="unit-status status-active">Available</span>
+                    <!-- Scrollable container for units -->
+                    <div class="unit-scroll-container">
+                        <!-- Example: Dispatched/Enroute/Emergency units -->
+                        <div class="unit-card enroute" data-unit="police-8">
+                            <div class="unit-header">
+                                <div>
+                                    <h4 class="unit-name">Police Unit #8</h4>
+                                    <span class="unit-status status-enroute">Dispatched (En Route)</span>
+                                </div>
+                            </div>
+                            <div class="unit-details">
+                                <div><i class="fas fa-map-marker-alt"></i> Downtown</div>
+                            </div>
+                            <div class="unit-actions">
+                                <button class="btn-unit" onclick="trackUnit('police-8')">
+                                    <i class="fas fa-location-arrow"></i> Track
+                                </button>
+                                <button class="btn-unit" onclick="unitHistory('police-8')">
+                                    <i class="fas fa-history"></i> History
+                                </button>
                             </div>
                         </div>
-                        <div class="unit-details">
-                            <div><i class="fas fa-map-marker-alt"></i> Station 1</div>
-                            <div><i class="fas fa-tachometer-alt"></i> 0 mph</div>
-                            <div><i class="fas fa-gas-pump"></i> 85% Fuel</div>
-                            <div><i class="fas fa-clock"></i> 15 min idle</div>
-                        </div>
-                        <div class="unit-metrics">
-                            <div class="metric">
-                                <div class="metric-value">12</div>
-                                <div class="metric-label">Calls</div>
+                        <div class="unit-card emergency" data-unit="engine-12">
+                            <div class="unit-header">
+                                <div>
+                                    <h4 class="unit-name">Engine #12</h4>
+                                    <span class="unit-status status-emergency">Dispatched (Emergency)</span>
+                                </div>
                             </div>
-                            <div class="metric">
-                                <div class="metric-value">98%</div>
-                                <div class="metric-label">Uptime</div>
+                            <div class="unit-details">
+                                <div><i class="fas fa-map-marker-alt"></i> Residential Area</div>
                             </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-unit" onclick="trackUnit('ambulance-5')">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-unit" onclick="unitHistory('ambulance-5')">
-                                <i class="fas fa-history"></i> History
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="unit-card enroute" data-unit="police-8">
-                        <div class="unit-header">
-                            <div>
-                                <h4 class="unit-name">Police Unit #8</h4>
-                                <span class="unit-status status-enroute">En Route</span>
+                            <div class="unit-actions">
+                                <button class="btn-unit" onclick="trackUnit('engine-12')">
+                                    <i class="fas fa-location-arrow"></i> Track
+                                </button>
+                                <button class="btn-unit" onclick="unitHistory('engine-12')">
+                                    <i class="fas fa-history"></i> History
+                                </button>
                             </div>
                         </div>
-                        <div class="unit-details">
-                            <div><i class="fas fa-map-marker-alt"></i> Downtown</div>
-                            <div><i class="fas fa-tachometer-alt"></i> 35 mph</div>
-                            <div><i class="fas fa-gas-pump"></i> 92% Fuel</div>
-                            <div><i class="fas fa-clock"></i> ETA 8 min</div>
-                        </div>
-                        <div class="unit-metrics">
-                            <div class="metric">
-                                <div class="metric-value">8</div>
-                                <div class="metric-label">Calls</div>
+                        <!-- Example: Available unit -->
+                        <div class="unit-card active" data-unit="ambulance-5">
+                            <div class="unit-header">
+                                <div>
+                                    <h4 class="unit-name">Ambulance #5</h4>
+                                    <span class="unit-status status-active">Available</span>
+                                </div>
                             </div>
-                            <div class="metric">
-                                <div class="metric-value">95%</div>
-                                <div class="metric-label">Uptime</div>
+                            <div class="unit-details">
+                                <div><i class="fas fa-map-marker-alt"></i> Station 1</div>
                             </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-unit" onclick="trackUnit('police-8')">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-unit" onclick="unitHistory('police-8')">
-                                <i class="fas fa-history"></i> History
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="unit-card emergency" data-unit="engine-12">
-                        <div class="unit-header">
-                            <div>
-                                <h4 class="unit-name">Engine #12</h4>
-                                <span class="unit-status status-emergency">Emergency</span>
+                            <div class="unit-actions">
+                                <button class="btn-unit" onclick="trackUnit('ambulance-5')">
+                                    <i class="fas fa-location-arrow"></i> Track
+                                </button>
+                                <button class="btn-unit" onclick="unitHistory('ambulance-5')">
+                                    <i class="fas fa-history"></i> History
+                                </button>
                             </div>
                         </div>
-                        <div class="unit-details">
-                            <div><i class="fas fa-map-marker-alt"></i> Residential Area</div>
-                            <div><i class="fas fa-tachometer-alt"></i> 45 mph</div>
-                            <div><i class="fas fa-gas-pump"></i> 67% Fuel</div>
-                            <div><i class="fas fa-clock"></i> On Scene</div>
-                        </div>
-                        <div class="unit-metrics">
-                            <div class="metric">
-                                <div class="metric-value">15</div>
-                                <div class="metric-label">Calls</div>
-                            </div>
-                            <div class="metric">
-                                <div class="metric-value">89%</div>
-                                <div class="metric-label">Uptime</div>
-                            </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-unit" onclick="trackUnit('engine-12')">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                            <button class="btn-unit" onclick="unitHistory('engine-12')">
-                                <i class="fas fa-history"></i> History
-                            </button>
-                        </div>
+                        <!-- Add more units as needed -->
                     </div>
                 </div>
             </div>
@@ -470,7 +431,8 @@ function updateMapVisibility() {
 }
 
 function centerMap() {
-  map.setView([15.6760, 125.0437], 13);
+    // Quezon City Hall coordinates
+    map.setView([14.6760, 121.0437], 13);
 }
 
 function refreshMap() {

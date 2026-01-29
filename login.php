@@ -25,12 +25,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = 'Please enter both email and password.';
     } else {
         $result = login_user($email, $password);
-        
         if ($result['success']) {
-            // Get redirect URL if provided
-            $redirect = $_GET['redirect'] ?? 'index.php';
-            header('Location: ' . $redirect);
-            exit;
+            // OTP step: generate, save to DB, and send OTP email, then redirect to OTP page
+            require_once __DIR__ . '/includes/mail_helper.php';
+            $otp = rand(100000, 999999);
+            $_SESSION['otp'] = $otp;
+            $_SESSION['otp_email'] = $email;
+            $_SESSION['otp_expiry'] = time() + 300; // 5 minutes
+            saveOtpToDatabase($email, $otp, 5);
+            $mailSent = sendOtpEmail($email, $otp);
+            if ($mailSent) {
+                header('Location: otp.php');
+                exit;
+            } else {
+                $error_message = 'Failed to send OTP email. Please contact admin or try again later.';
+            }
         } else {
             $error_message = $result['message'];
         }

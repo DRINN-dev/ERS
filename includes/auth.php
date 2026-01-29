@@ -21,7 +21,7 @@ if (session_status() === PHP_SESSION_NONE) {
  * @return bool
  */
 function is_logged_in(): bool {
-    return isset($_SESSION['user_id']) && isset($_SESSION['user_email']);
+    return isset($_SESSION['user_id']) && isset($_SESSION['user_email']) && (isset($_SESSION['otp_verified']) && $_SESSION['otp_verified'] === true);
 }
 
 /**

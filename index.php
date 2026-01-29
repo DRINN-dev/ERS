@@ -204,14 +204,6 @@ try {
                     <div class="chart-container">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #333;">Incidents by Type</h3>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button class="btn-metric" onclick="refreshChart()">
-                                    <i class="fas fa-sync"></i> Refresh
-                                </button>
-                                <button class="btn-metric" onclick="exportChart()">
-                                    <i class="fas fa-download"></i> Export
-                                </button>
-                            </div>
                         </div>
                         <div style="position: relative; width: 100%; height: 320px;">
                             <canvas id="incidentsTypeBar" class="chart-canvas"></canvas>
@@ -221,14 +213,6 @@ try {
                     <div class="chart-container">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #333;">Incident Priority Distribution</h3>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button class="btn-metric" onclick="toggleChartView()">
-                                    <i class="fas fa-pie-chart"></i> Toggle View
-                                </button>
-                                <button class="btn-metric" onclick="filterChart()">
-                                    <i class="fas fa-filter"></i> Filter
-                                </button>
-                            </div>
                         </div>
                         <div style="position: relative; width: 100%; height: 320px;">
                             <canvas id="incidentsPriorityPie" class="chart-canvas"></canvas>
@@ -452,10 +436,67 @@ try {
             window.location.href = 'report.php';
         }
         function trendAnalysis() {
-            showNotification('Opening trend analysis...', 'info');
-            setTimeout(() => {
-                showNotification('Trend analysis loaded', 'success');
-            }, 800);
+            var modal = document.getElementById('trendModal');
+            if (modal) modal.style.display = 'flex';
+            // Set default date range (last 30 days)
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - 29);
+            document.getElementById('trendStart').value = start.toISOString().slice(0,10);
+            document.getElementById('trendEnd').value = end.toISOString().slice(0,10);
+            loadTrendData();
+        }
+        function closeTrendModal() {
+            var modal = document.getElementById('trendModal');
+            if (modal) modal.style.display = 'none';
+        }
+        function loadTrendData() {
+            const start = document.getElementById('trendStart').value;
+            const end = document.getElementById('trendEnd').value;
+            document.getElementById('trendLoading').style.display = '';
+            document.getElementById('trendNoData').style.display = 'none';
+            fetch(`api/trend_data.php?start=${start}&end=${end}`)
+                .then(r=>r.json())
+                .then(data => {
+                    document.getElementById('trendLoading').style.display = 'none';
+                    if (!data.ok || !data.labels.length) {
+                        document.getElementById('trendNoData').style.display = '';
+                        if(window._trendChartInstance) window._trendChartInstance.destroy();
+                        return;
+                    }
+                    document.getElementById('trendNoData').style.display = 'none';
+                    if(window._trendChartInstance) window._trendChartInstance.destroy();
+                    const ctx = document.getElementById('trendChart').getContext('2d');
+                    window._trendChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: 'Total Incidents',
+                                data: data.values,
+                                borderColor: '#007bff',
+                                backgroundColor: 'rgba(0,123,255,0.08)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointBackgroundColor: '#007bff',
+                                pointBorderColor: '#fff',
+                                pointHoverRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                            }
+                        }
+                    });
+                });
+        }
+        document.getElementById('trendFilterForm').onsubmit = function(e) {
+            e.preventDefault();
+            loadTrendData();
         }
         function systemHealth() {
             showNotification('Running system health check...', 'info');
@@ -477,22 +518,46 @@ try {
             }, 1000);
         }
         function exportChart() {
-            // Get incident type data
+            // Gather dashboard metrics from DOM
+            const getMetric = (selector) => {
+                const el = document.querySelector(selector);
+                return el ? el.textContent.trim() : '--';
+            };
+            const activeIncidents = getMetric('.metric-card.critical .metric-value');
+            const pendingCalls = getMetric('.metric-card.warning .metric-value');
+            const availableResponders = getMetric('.metric-card.success .metric-value');
+            const totalIncidents = getMetric('.metric-card.info .metric-value');
+
+            // Chart data
             const labels = ['Medical','Fire','Police','Traffic','Other'];
-            const values = typesValues;
-            // Create printable content
-            let printContent = '<h2>Incident Types</h2><table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;"><tr><th>Type</th><th>Count</th></tr>';
+            const values = (typeof typesValues !== 'undefined') ? typesValues : [0,0,0,0,0];
+
+            // Build summary HTML
+            let printContent = `
+                <h2 style="margin-bottom:0.5em;">ERS Dashboard Summary</h2>
+                <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;margin-bottom:1.5em;">
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Active Incidents</td><td>${activeIncidents}</td></tr>
+                    <tr><td>Pending Calls</td><td>${pendingCalls}</td></tr>
+                    <tr><td>Available Responders</td><td>${availableResponders}</td></tr>
+                    <tr><td>Total Incidents (This Month)</td><td>${totalIncidents}</td></tr>
+                </table>
+                <h3 style="margin-bottom:0.5em;">Incidents by Type</h3>
+                <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;">
+                    <tr><th>Type</th><th>Count</th></tr>
+            `;
             for (let i = 0; i < labels.length; i++) {
                 printContent += `<tr><td>${labels[i]}</td><td>${values[i]}</td></tr>`;
             }
             printContent += '</table>';
+
             // Open print window
-            const printWindow = window.open('', '', 'width=600,height=400');
-            printWindow.document.write('<html><head><title>Incident Types</title></head><body>' + printContent + '</body></html>');
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write('<html><head><title>ERS Dashboard Summary</title></head><body style="font-family:sans-serif;">' + printContent + '</body></html>');
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
-            printWindow.close();
+            // Optionally, do not auto-close so user can save as PDF
         }
         function toggleChartView() {
             showNotification('Switching chart view...', 'info');
@@ -532,171 +597,26 @@ try {
         }
         // Activity and alert functions
         function viewAllActivity() {
-            showNotification('Opening full activity log...', 'info');
-            setTimeout(() => {
-                showNotification('Activity log loaded', 'success');
-            }, 600);
-        }
-        function viewAllAlerts() {
-            showNotification('Opening alerts management...', 'info');
-            setTimeout(() => {
-                showNotification('Alerts panel loaded', 'success');
-            }, 500);
-        }
-        // Notification system
-        function showNotification(message, type) {
-            // Remove existing notifications
-            const existingNotifications = document.querySelectorAll('.notification');
-            existingNotifications.forEach(notification => notification.remove());
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 1rem 1.5rem;
-                border-radius: 8px;
-                color: white;
-                font-weight: 600;
-                z-index: 1000;
-                animation: slideIn 0.3s ease-out;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            `;
-            // Set background color based on type
-            if (type === 'success') {
-                notification.style.backgroundColor = '#28a745';
-            } else if (type === 'error') {
-                notification.style.backgroundColor = '#dc3545';
-            } else if (type === 'info') {
-                notification.style.backgroundColor = '#17a2b8';
-            } else if (type === 'warning') {
-                notification.style.backgroundColor = '#ffc107';
-            }
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            // Auto remove after 3 seconds
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-in';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
+            var modal = document.getElementById('activityModal');
+            if (modal) modal.style.display = 'flex';
+            document.getElementById('activityModalLoading').style.display = '';
+            document.getElementById('activityModalNoData').style.display = 'none';
+            document.getElementById('activityModalList').innerHTML = '';
+            fetch('api/activity_feed.php?all=1')
+                .then(r=>r.json())
+                .then(data => {
+                    document.getElementById('activityModalLoading').style.display = 'none';
+                    if (!data.ok || !data.data.length) {
+                        document.getElementById('activityModalNoData').style.display = '';
+                        return;
                     }
-                }, 300);
-            }, 3000);
+                    document.getElementById('activityModalNoData').style.display = 'none';
+                    document.getElementById('activityModalList').innerHTML = data.data.map(renderActivityItem).join('');
+                });
         }
-        // Add CSS animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-            .metric-card, .action-btn, .btn-metric, .btn-dashboard {
-                transition: all 0.3s ease;
-            }
-            .metric-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-            }
-            .action-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(102,126,234,0.3);
-            }
-            .btn-metric:hover, .btn-dashboard:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            }
-            .activity-item:hover, .alert-item:hover {
-                background-color: #f8f9fa;
-            }
-            /* Active Alerts styling */
-            .alerts-panel { display: flex; flex-direction: column; gap: 10px; }
-            .alerts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-            .alerts-title { margin: 0; font-size: 1.1rem; font-weight: 700; color: #333; }
-            .alert-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-            .alert-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 12px 0 0 12px; }
-            .alert-item.critical::before { background-color: #dc2626; }
-            .alert-item.warning::before { background-color: #f59e0b; }
-            .alert-item.info::before { background-color: #3b82f6; }
-            .alert-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
-            .alert-icon.critical { background-color: #dc2626; }
-            .alert-icon.warning { background-color: #f59e0b; }
-            .alert-icon.info { background-color: #3b82f6; }
-            .alert-content { display: flex; flex-direction: column; gap: 2px; }
-            .alert-text { font-weight: 600; color: #111827; }
-            .alert-details { color: #6b7280; font-size: 0.9rem; }
-            .alert-item:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.08); transform: translateY(-1px); transition: box-shadow 0.2s ease, transform 0.2s ease; }
-            @media (max-width: 640px) {
-                .alert-item { padding: 10px 12px; }
-                .alert-icon { width: 36px; height: 36px; }
-            }
-            .chart-canvas { width: 100% !important; height: 100% !important; display: block; }
-        `;
-        document.head.appendChild(style);
-        // Auto-refresh dashboard every 5 minutes
-        setInterval(() => {
-            refreshDashboard();
-        }, 300000);
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            showNotification('Dashboard loaded successfully', 'success');
-        });
-    </script>
-        <script>
-        // Load dynamic activity feed
-        function renderActivityItem(item) {
-            let icon = '<i class="fas fa-info-circle"></i>';
-            let iconClass = 'system';
-            let text = '';
-            let details = '';
-            let time = '';
-            if (item.type === 'incident') {
-                icon = '<i class="fas fa-exclamation-triangle"></i>';
-                iconClass = 'emergency';
-                text = `${item.event_type.charAt(0).toUpperCase() + item.event_type.slice(1)} Incident Reported`;
-                details = `${item.location_address || 'Unknown location'} • Priority: ${item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'N/A'}`;
-                time = timeAgo(item.created_at);
-            } else if (item.type === 'dispatch') {
-                icon = '<i class="fas fa-truck-medical"></i>';
-                iconClass = 'response';
-                text = `${item.unit_identifier || 'Unit'} Dispatched`;
-                details = `To incident #${item.incident_id} • ${item.unit_type || ''}`;
-                time = timeAgo(item.created_at);
-            }
-            return `<div class="activity-item"><div class="activity-icon ${iconClass}">${icon}</div><div class="activity-content"><div class="activity-text">${text}</div><div class="activity-details">${details}</div><div class="activity-time">${time}</div></div></div>`;
-        }
-        function loadActivityFeed() {
-            fetch('api/activity_feed.php').then(r=>r.json()).then(data => {
-                const el = document.getElementById('activity-feed-list');
-                if (!data.ok || !data.data.length) {
-                    el.innerHTML = '<div class="activity-item"><div class="activity-content">No recent activity.</div></div>';
-                    return;
-                }
-                el.innerHTML = data.data.map(renderActivityItem).join('');
-            });
-        }
-        // Load dynamic alerts
-        function renderAlertItem(alert) {
-            let icon = '<i class="fas fa-info-circle"></i>';
-            let iconClass = 'info';
-            if (alert.type === 'critical') { icon = '<i class="fas fa-exclamation-circle"></i>'; iconClass = 'critical'; }
-            else if (alert.type === 'warning') { icon = '<i class="fas fa-exclamation-triangle"></i>'; iconClass = 'warning'; }
-            return `<div class="alert-item ${iconClass}"><div class="alert-icon ${iconClass}">${icon}</div><div class="alert-content"><div class="alert-text">${alert.title}</div><div class="alert-details">${alert.details}</div></div></div>`;
-        }
-        function loadAlertsPanel() {
-            fetch('api/alerts_active.php').then(r=>r.json()).then(data => {
-                const el = document.getElementById('alerts-panel-list');
-                if (!data.ok || !data.data.length) {
-                    el.innerHTML = '<div class="alert-item info"><div class="alert-content">No active alerts.</div></div>';
-                    return;
-                }
-                el.innerHTML = data.data.map(renderAlertItem).join('');
-            });
+        function closeActivityModal() {
+            var modal = document.getElementById('activityModal');
+            if (modal) modal.style.display = 'none';
         }
         // Helper: time ago
         function timeAgo(dateStr) {
@@ -717,3 +637,172 @@ try {
         </script>
 </body>
 </html>
+<!-- Trend Analysis Modal -->
+<div id="trendModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem 2.5rem 1.5rem 2.5rem;border-radius:12px;max-width:540px;width:98vw;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
+    <button onclick="closeTrendModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">&times;</button>
+    <h2 style="margin-top:0;margin-bottom:1.2rem;font-size:1.3rem;color:#222;text-align:center;">Incident Trends (Daily)</h2>
+    <form id="trendFilterForm" style="display:flex;gap:1em;align-items:center;justify-content:center;margin-bottom:1.2em;flex-wrap:wrap;">
+      <label style="font-size:1em;color:#333;">From: <input type="date" id="trendStart" required></label>
+      <label style="font-size:1em;color:#333;">To: <input type="date" id="trendEnd" required></label>
+      <button type="submit" style="background:#007bff;color:#fff;border:none;border-radius:6px;padding:0.4em 1.2em;font-size:1em;cursor:pointer;">Show</button>
+    </form>
+    <canvas id="trendChart" width="440" height="220"></canvas>
+    <div id="trendLoading" style="display:none;text-align:center;color:#888;margin-top:1em;">Loading...</div>
+    <div id="trendNoData" style="display:none;text-align:center;color:#888;margin-top:1em;">No data for selected range.</div>
+  </div>
+</div>
+<style>
+#trendFilterForm label {
+  font-size: 1em;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-bottom: 0;
+}
+#trendFilterForm input[type="date"] {
+  padding: 0.35em 0.7em;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 1em;
+  background: #f8f9fa;
+  color: #222;
+  outline: none;
+  transition: border 0.2s;
+}
+#trendFilterForm input[type="date"]:focus {
+  border: 1.5px solid #007bff;
+  background: #fff;
+}
+#trendFilterForm button[type="submit"] {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45em 1.3em;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.5em;
+  transition: background 0.2s;
+}
+#trendFilterForm button[type="submit"]:hover {
+  background: #0056b3;
+}
+@media (max-width: 600px) {
+  #trendFilterForm { flex-direction: column; gap: 0.7em; }
+  #trendFilterForm button[type="submit"] { margin-left: 0; width: 100%; }
+}
+</style>
+<script>
+function trendAnalysis() {
+    var modal = document.getElementById('trendModal');
+    if (modal) modal.style.display = 'flex';
+    // Set default date range (last 30 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 29);
+    document.getElementById('trendStart').value = start.toISOString().slice(0,10);
+    document.getElementById('trendEnd').value = end.toISOString().slice(0,10);
+    loadTrendData();
+}
+function closeTrendModal() {
+    var modal = document.getElementById('trendModal');
+    if (modal) modal.style.display = 'none';
+}
+function loadTrendData() {
+    const start = document.getElementById('trendStart').value;
+    const end = document.getElementById('trendEnd').value;
+    document.getElementById('trendLoading').style.display = '';
+    document.getElementById('trendNoData').style.display = 'none';
+    fetch(`api/trend_data.php?start=${start}&end=${end}`)
+        .then(r=>r.json())
+        .then(data => {
+            document.getElementById('trendLoading').style.display = 'none';
+            if (!data.ok || !data.labels.length) {
+                document.getElementById('trendNoData').style.display = '';
+                if(window._trendChartInstance) window._trendChartInstance.destroy();
+                return;
+            }
+            document.getElementById('trendNoData').style.display = 'none';
+            if(window._trendChartInstance) window._trendChartInstance.destroy();
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            window._trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Incidents',
+                        data: data.values,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0,123,255,0.08)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#007bff',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        });
+}
+document.getElementById('trendFilterForm').onsubmit = function(e) {
+    e.preventDefault();
+    loadTrendData();
+};
+</script>
+</body>
+</html>
+<!-- Activity Feed Modal -->
+<div id="activityModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem 2.5rem 1.5rem 2.5rem;border-radius:12px;max-width:700px;width:98vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
+    <button onclick="closeActivityModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">&times;</button>
+    <h2 style="margin-top:0;margin-bottom:1.2rem;font-size:1.3rem;color:#222;text-align:center;">All System Activity</h2>
+    <div id="activityModalList"></div>
+    <div id="activityModalLoading" style="display:none;text-align:center;color:#888;margin-top:1em;">Loading...</div>
+    <div id="activityModalNoData" style="display:none;text-align:center;color:#888;margin-top:1em;">No activity found.</div>
+  </div>
+</div>
+<!-- Alerts Feed Modal -->
+<div id="alertsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem 2.5rem 1.5rem 2.5rem;border-radius:12px;max-width:700px;width:98vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
+    <button onclick="closeAlertsModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">&times;</button>
+    <h2 style="margin-top:0;margin-bottom:1.2rem;font-size:1.3rem;color:#222;text-align:center;">All Active Alerts</h2>
+    <div id="alertsModalList"></div>
+    <div id="alertsModalLoading" style="display:none;text-align:center;color:#888;margin-top:1em;">Loading...</div>
+    <div id="alertsModalNoData" style="display:none;text-align:center;color:#888;margin-top:1em;">No active alerts found.</div>
+  </div>
+</div>
+<script>
+function viewAllAlerts() {
+    var modal = document.getElementById('alertsModal');
+    if (modal) modal.style.display = 'flex';
+    document.getElementById('alertsModalLoading').style.display = '';
+    document.getElementById('alertsModalNoData').style.display = 'none';
+    document.getElementById('alertsModalList').innerHTML = '';
+    fetch('api/alerts_active.php?all=1')
+        .then(r=>r.json())
+        .then(data => {
+            document.getElementById('alertsModalLoading').style.display = 'none';
+            if (!data.ok || !data.data.length) {
+                document.getElementById('alertsModalNoData').style.display = '';
+                return;
+            }
+            document.getElementById('alertsModalNoData').style.display = 'none';
+            document.getElementById('alertsModalList').innerHTML = data.data.map(renderAlertItem).join('');
+        });
+}
+function closeAlertsModal() {
+    var modal = document.getElementById('alertsModal');
+    if (modal) modal.style.display = 'none';
+}
+</script>

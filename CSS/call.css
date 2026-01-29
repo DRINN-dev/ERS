@@ -103,7 +103,7 @@
 
         /* Active Call Panel */
         .active-call-panel {
-            background: white;
+            background: var(--card-bg-1);
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -165,7 +165,7 @@
 
         /* Incident Form */
         .incident-form {
-            background: white;
+            background: var(--card-bg-1);
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -290,7 +290,7 @@
 
         /* Sidebar - Recent Incidents */
         .recent-incidents {
-            background: white;
+            background: var(--card-bg-1);
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -319,7 +319,7 @@
             padding: 6px 12px;
             border: 2px solid #e5e7eb;
             border-radius: 6px;
-            background: white;
+            background: var(--card-bg-1);
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
@@ -426,7 +426,7 @@
         }
 
         .stat-card {
-            background: white;
+            background: var(--card-bg-1);
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);

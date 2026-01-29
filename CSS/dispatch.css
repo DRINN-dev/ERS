@@ -1,3 +1,14 @@
+/* Dark mode support for main content */
+[data-theme="dark"] .main-content,
+[data-theme="dark"] .main-container {
+    background: var(--bg-color-1) !important;
+    color: var(--text-color-1) !important;
+}
+
+[data-theme="dark"] .dispatch-panel {
+    background: var(--card-bg-1) !important;
+    color: var(--text-color-1) !important;
+}
 .dispatch-grid {
             display: grid;
             grid-template-columns: 2fr 1fr 1fr;
@@ -6,7 +17,7 @@
         }
 
         .dispatch-panel {
-            background: white;
+            background: var(--card-bg-1);
             border-radius: 12px;
             padding: 1.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -125,7 +136,7 @@
         .btn-action-small {
             padding: 0.375rem 0.75rem;
             border: 1px solid #ddd;
-            background: white;
+            background: var(--card-bg-1);
             border-radius: 4px;
             font-size: 0.8rem;
             cursor: pointer;
@@ -323,7 +334,7 @@
 }
 
 .ai-recommendations-content {
-    background: white;
+    background: var(--card-bg-1);
     border-radius: 12px;
     padding: 1.5rem;
     border: 1px solid rgba(245, 158, 11, 0.1);

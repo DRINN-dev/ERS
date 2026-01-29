@@ -34,10 +34,7 @@ $pageTitle = 'Inter-Agency Coordination';
     <div class="main-content">
         <div class="main-container">
 
-            <h1 style="font-size: 2rem; font-weight: 700; color: #333; margin-bottom: 2rem; display: flex; align-items: center;">
-                <i class="fas fa-handshake" style="margin-right: 0.5rem; color: #6f42c1;"></i>
-                Inter-Agency Coordination Center
-            </h1>
+            <div style="height: 3.5rem;"></div>
 
             <!-- System Status Overview -->
             <div class="coordination-overview">

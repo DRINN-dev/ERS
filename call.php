@@ -31,10 +31,7 @@ $pageTitle = 'Emergency Call Center';
        =================================== -->
     <div class="main-content">
         <div class="main-container">
-            <h1 class="section-title" style="margin-bottom: 12px;">
-                <i class="fas fa-phone-volume"></i>
-                Call Receiving & Incident Logging
-            </h1>
+            <div style="height: 3.5rem;"></div>
 
             <!-- Stats Bar -->
             <div class="stats-bar">

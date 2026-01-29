@@ -34,10 +34,7 @@ $pageTitle = 'Incident Priority Management';
     <div class="main-content">
         <div class="main-container">
 
-            <h1 class="section-title">
-                <i class="fas fa-exclamation-triangle"></i>
-                Incident Priority Management
-            </h1>
+            <div style="height: 3.5rem;"></div>
 
             <!-- Statistics Cards -->
             <div class="stats-cards">
@@ -344,10 +341,10 @@ $pageTitle = 'Incident Priority Management';
         }
 
         // Add event listeners to filters
-        priorityFilter.addEventListener('change', applyFilters);
-        statusFilter.addEventListener('change', applyFilters);
-        typeFilter.addEventListener('change', applyFilters);
-        searchInput.addEventListener('input', applyFilters);
+        priorityFilter.addEventListener('change', fetchIncidents);
+        statusFilter.addEventListener('change', fetchIncidents);
+        typeFilter.addEventListener('change', fetchIncidents);
+        searchInput.addEventListener('input', fetchIncidents);
 
         // Update statistics
         function updateStats() {
@@ -472,8 +469,18 @@ $pageTitle = 'Incident Priority Management';
         }
 
         async function fetchIncidents() {
+            // Gather filter values
+            const params = new URLSearchParams();
+            const priorityValue = (priorityFilter.value || '').toLowerCase();
+            const statusValue = (statusFilter.value || '').toLowerCase();
+            const typeValue = (typeFilter.value || '').toLowerCase();
+            const searchValue = (searchInput.value || '').toLowerCase();
+            if (priorityValue) params.append('priority', priorityValue);
+            if (statusValue) params.append('status', statusValue);
+            if (typeValue) params.append('type', typeValue);
+            if (searchValue) params.append('search', searchValue);
             try {
-                const res = await fetch(API_LIST_URL);
+                const res = await fetch(API_LIST_URL + '?' + params.toString());
                 const data = await res.json();
                 if (data && data.ok) {
                     INCIDENTS = data.items || [];

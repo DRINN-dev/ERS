@@ -11,7 +11,11 @@ if (!$pdo) {
 }
 
 // Optional filters (client-side filtering also supported)
+
 $priority = isset($_GET['priority']) ? trim((string)$_GET['priority']) : '';
+$status = isset($_GET['status']) ? trim((string)$_GET['status']) : '';
+$type = isset($_GET['type']) ? trim((string)$_GET['type']) : '';
+$search = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
 $day = isset($_GET['day']) ? trim((string)$_GET['day']) : ''; // YYYY-MM-DD
 $month = isset($_GET['month']) ? trim((string)$_GET['month']) : ''; // YYYY-MM
 
@@ -31,16 +35,40 @@ $sql = 'SELECT i.id, i.reference_no, i.type, i.priority, i.status, i.location_ad
 $where = [];
 $params = [];
 
+
 if ($priority !== '') {
-    $where[] = 'priority = :priority';
+    $where[] = 'i.priority = :priority';
     $params[':priority'] = $priority;
 }
+if ($status !== '') {
+    // Map status filter to DB values
+    if ($status === 'active') {
+        $where[] = "(i.status = 'pending' OR i.status = 'active')";
+    } elseif ($status === 'dispatched') {
+        $where[] = "i.status = 'dispatched'";
+    } elseif ($status === 'resolved') {
+        $where[] = "(i.status = 'resolved' OR i.status = 'cancelled')";
+    }
+}
+if ($type !== '') {
+    $where[] = 'i.type = :type';
+    $params[':type'] = $type;
+}
+if ($search !== '') {
+    $where[] = "(
+        i.reference_no LIKE :search OR
+        i.type LIKE :search OR
+        i.location_address LIKE :search OR
+        i.description LIKE :search
+    )";
+    $params[':search'] = '%' . $search . '%';
+}
 if ($day !== '') {
-    $where[] = 'DATE(created_at) = :day';
+    $where[] = 'DATE(i.created_at) = :day';
     $params[':day'] = $day;
 }
 if ($month !== '') {
-    $where[] = 'DATE_FORMAT(created_at, "%Y-%m") = :month';
+    $where[] = 'DATE_FORMAT(i.created_at, "%Y-%m") = :month';
     $params[':month'] = $month;
 }
 

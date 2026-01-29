@@ -55,11 +55,8 @@ try {
     <div class="main-content">
         <div class="main-container">
 
-            <h1 style="font-size: 2rem; font-weight: 700; color: #333; margin-bottom: 2rem; display: flex; align-items: center;">
-                <i class="fas fa-chart-line" style="margin-right: 0.5rem; color: #007bff;"></i>
-                Analytics & Reporting
-            </h1>
 
+            <div style="height: 3.5rem;"></div>
             <!-- Key Metrics Overview -->
             <div class="analytics-grid">
                 <div class="analytics-card response-time">
@@ -281,6 +278,7 @@ try {
                 </div>
             </div>
 
+
             <div class="chart-container">
                 <div class="chart-header">
                     <h3 class="chart-title">Incident Types Distribution</h3>
@@ -295,6 +293,16 @@ try {
                 </div>
                 <div style="position: relative; width: 100%; height: 320px;">
                     <canvas id="incidentsTypesChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Call Duration Graph -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Call Duration by Incident Type</h3>
+                </div>
+                <div style="position: relative; width: 100%; height: 320px;">
+                    <canvas id="callDurationChart" class="chart-canvas"></canvas>
                 </div>
             </div>
 
@@ -750,6 +758,7 @@ try {
         // Charts
         let responseChart = null;
         let typesChart = null;
+        let callDurationChart = null;
 
         async function refreshCharts(filters = {}) {
             try {
@@ -825,6 +834,39 @@ try {
                             typesChart.data.labels = labels;
                             typesChart.data.datasets[0].data = values;
                             typesChart.update();
+                        }
+                    }
+                }
+                // Call Duration Chart
+                const callRes = await fetch('api/report_call_duration.php');
+                const callData = await callRes.json();
+                if (callData.ok) {
+                    const labels = callData.data.map(x => x.type);
+                    const values = callData.data.map(x => x.avg_duration);
+                    const ctx3 = document.getElementById('callDurationChart');
+                    if (ctx3) {
+                        if (!callDurationChart) {
+                            callDurationChart = new Chart(ctx3, {
+                                type: 'bar',
+                                data: {
+                                    labels,
+                                    datasets: [{
+                                        label: 'Avg Call Duration (min)',
+                                        data: values,
+                                        backgroundColor: '#6366f1',
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: { y: { beginAtZero: true } },
+                                    plugins: { legend: { display: true } }
+                                }
+                            });
+                        } else {
+                            callDurationChart.data.labels = labels;
+                            callDurationChart.data.datasets[0].data = values;
+                            callDurationChart.update();
                         }
                     }
                 }

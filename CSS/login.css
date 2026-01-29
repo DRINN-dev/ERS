@@ -18,7 +18,7 @@
 }
 
 .login-card {
-    background: #ffffff;
+    background: var(--card-bg-1);
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     padding: 2.5rem;
@@ -190,7 +190,7 @@
     border-radius: 8px;
     font-size: 0.95rem;
     color: #1f2937;
-    background-color: #ffffff;
+    background-color: var(--card-bg-1);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 

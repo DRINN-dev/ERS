@@ -111,70 +111,51 @@ try {
                         <span style="background: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $activeIncidents; ?> Active</span>
                     </div>
 
-                    <div class="call-card high">
-                        <div class="call-info">
-                            <div class="call-details">
-                                <div class="call-title">Cardiac Arrest - Downtown Hospital</div>
-                                <div class="call-meta">
-                                    <span><i class="fas fa-clock"></i> 2 min ago</span>
-                                    <span><i class="fas fa-user"></i> John Smith</span>
-                                    <span class="status-indicator status-active"></span> High Priority
-                                </div>
-                            </div>
-                        </div>
-                        <div class="call-actions">
-                            <button class="btn-dispatch" onclick="dispatchUnit(this, 'Ambulance #5')">Dispatch Ambulance</button>
-                            <button class="btn-action-small" onclick="viewDetails(this)">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            <button class="btn-action-small" onclick="contactCaller(this)">
-                                <i class="fas fa-phone"></i> Call
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="call-card medium">
-                        <div class="call-info">
-                            <div class="call-details">
-                                <div class="call-title">Multi-Vehicle Accident - Highway 101</div>
-                                <div class="call-meta">
-                                    <span><i class="fas fa-clock"></i> 8 min ago</span>
-                                    <span><i class="fas fa-user"></i> Sarah Johnson</span>
-                                    <span class="status-indicator status-busy"></span> Medium Priority
-                                </div>
-                            </div>
-                        </div>
-                        <div class="call-actions">
-                            <button class="btn-dispatch" onclick="dispatchUnit(this, 'Police Unit #8')">Dispatch Police</button>
-                            <button class="btn-action-small" onclick="viewDetails(this)">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            <button class="btn-action-small" onclick="contactCaller(this)">
-                                <i class="fas fa-phone"></i> Call
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="call-card low">
-                        <div class="call-info">
-                            <div class="call-details">
-                                <div class="call-title">Suspicious Person Report</div>
-                                <div class="call-meta">
-                                    <span><i class="fas fa-clock"></i> 15 min ago</span>
-                                    <span><i class="fas fa-user"></i> Mike Davis</span>
-                                    <span class="status-indicator status-available"></span> Low Priority
-                                </div>
-                            </div>
-                        </div>
-                        <div class="call-actions">
-                            <button class="btn-dispatch" onclick="dispatchUnit(this, 'Police Unit #15')">Dispatch Police</button>
-                            <button class="btn-action-small" onclick="viewDetails(this)">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            <button class="btn-action-small" onclick="contactCaller(this)">
-                                <i class="fas fa-phone"></i> Call
-                            </button>
-                        </div>
+                    <div style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
+                    <?php
+                    // Fetch all active incidents (pending/dispatched)
+                    $incidents = [];
+                    if ($pdo) {
+                        $stmt = $pdo->query("SELECT i.*, c.caller_name, c.caller_phone, c.priority AS call_priority, c.received_at FROM incidents i LEFT JOIN calls c ON c.id = i.reported_by_call_id WHERE i.status IN ('pending','dispatched') ORDER BY i.created_at DESC LIMIT 30");
+                        $incidents = $stmt->fetchAll();
+                    }
+                    if ($incidents) {
+                        foreach ($incidents as $incident) {
+                            // Priority class
+                            $prio = strtolower($incident['priority'] ?? 'medium');
+                            $prioClass = $prio === 'high' ? 'high' : ($prio === 'low' ? 'low' : 'medium');
+                            // Time ago
+                            $created = strtotime($incident['created_at']);
+                            $minsAgo = floor((time() - $created) / 60);
+                            $timeAgo = $minsAgo < 1 ? 'Just now' : ($minsAgo . ' min ago');
+                            // Caller
+                            $caller = $incident['caller_name'] ?: 'Unknown';
+                            $phone = $incident['caller_phone'] ?: '';
+                            $title = $incident['title'] ?: $incident['type'];
+                            echo '<div class="call-card ' . $prioClass . '">';
+                            echo '  <div class="call-info">';
+                            echo '    <div class="call-details">';
+                            echo '      <div class="call-title">' . htmlspecialchars($title) . '</div>';
+                            echo '      <div class="call-meta">';
+                            echo '        <span><i class="fas fa-clock"></i> ' . htmlspecialchars($timeAgo) . '</span>';
+                            echo '        <span><i class="fas fa-user"></i> ' . htmlspecialchars($caller) . '</span>';
+                            echo '        <span class="status-indicator status-' . $prioClass . '"></span> ' . ucfirst($prio) . ' Priority';
+                            echo '      </div>';
+                            echo '    </div>';
+                            echo '  </div>';
+                            echo '  <div class="call-actions">';
+                            echo '    <button class="btn-dispatch" onclick="dispatchUnit(this, \'' . addslashes($title) . '\')">Dispatch Unit</button>';
+                            echo '    <button class="btn-action-small" onclick="viewDetails(this)"><i class="fas fa-eye"></i> Details</button>';
+                            if ($phone) {
+                                echo '    <button class="btn-action-small" onclick="contactCaller(this)"><i class="fas fa-phone"></i> Call</button>';
+                            }
+                            echo '  </div>';
+                            echo '</div>';
+                        }
+                    } else {
+                        echo '<div class="call-card"><div class="call-info"><div class="call-details"><div class="call-title">No active emergency calls.</div></div></div></div>';
+                    }
+                    ?>
                     </div>
                 </div>
 
@@ -188,81 +169,38 @@ try {
                         <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
                     </div>
 
-                    <div class="unit-card available">
-                        <div class="unit-info">
-                            <div class="unit-details">
-                                <div class="unit-name">Ambulance #5</div>
-                                <div class="unit-meta">
-                                    <span><i class="fas fa-map-marker-alt"></i> Station 1</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-action-small" onclick="unitStatus(this, 'busy')">
-                                <i class="fas fa-play"></i> Deploy
-                            </button>
-                            <button class="btn-action-small" onclick="unitLocation(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="unit-card available">
-                        <div class="unit-info">
-                            <div class="unit-details">
-                                <div class="unit-name">Police Unit #8</div>
-                                <div class="unit-meta">
-                                    <span><i class="fas fa-map-marker-alt"></i> Downtown</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-action-small" onclick="unitStatus(this, 'busy')">
-                                <i class="fas fa-play"></i> Deploy
-                            </button>
-                            <button class="btn-action-small" onclick="unitLocation(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="unit-card busy">
-                        <div class="unit-info">
-                            <div class="unit-details">
-                                <div class="unit-name">Engine #12</div>
-                                <div class="unit-meta">
-                                    <span><i class="fas fa-map-marker-alt"></i> En Route</span>
-                                    <span><i class="fas fa-clock"></i> 5 min ETA</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-action-small" onclick="unitStatus(this, 'available')">
-                                <i class="fas fa-stop"></i> Stand Down
-                            </button>
-                            <button class="btn-action-small" onclick="unitLocation(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="unit-card available">
-                        <div class="unit-info">
-                            <div class="unit-details">
-                                <div class="unit-name">Police Unit #15</div>
-                                <div class="unit-meta">
-                                    <span><i class="fas fa-map-marker-alt"></i> Station 3</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="unit-actions">
-                            <button class="btn-action-small" onclick="unitStatus(this, 'busy')">
-                                <i class="fas fa-play"></i> Deploy
-                            </button>
-                            <button class="btn-action-small" onclick="unitLocation(this)">
-                                <i class="fas fa-location-arrow"></i> Track
-                            </button>
-                        </div>
+                    <div style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
+                    <?php
+                    // Fetch only available units
+                    $units = [];
+                    if ($pdo) {
+                        $stmt = $pdo->query("SELECT * FROM units WHERE status='available' ORDER BY unit_type, identifier");
+                        $units = $stmt->fetchAll();
+                    }
+                    if ($units) {
+                        foreach ($units as $unit) {
+                            $meta = [];
+                            if ($unit['unit_type']) $meta[] = ucfirst($unit['unit_type']);
+                            echo '<div class="unit-card available">';
+                            echo '  <div class="unit-info">';
+                            echo '    <div class="unit-details">';
+                            echo '      <div class="unit-name">' . htmlspecialchars($unit['identifier']) . '</div>';
+                            echo '      <div class="unit-meta">';
+                            echo '        <span><i class="fas fa-map-marker-alt"></i> ' . htmlspecialchars($unit['location'] ?? ($unit['unit_type'] ? ucfirst($unit['unit_type']) : '')) . '</span>';
+                            if (!empty($meta)) echo ' <span>' . implode(' | ', $meta) . '</span>';
+                            echo '      </div>';
+                            echo '    </div>';
+                            echo '  </div>';
+                            echo '  <div class="unit-actions">';
+                            echo '    <button class="btn-action-small" onclick="unitStatus(' . (int)$unit['id'] . ', \'busy\')"><i class="fas fa-play"></i> Deploy</button>';
+                            echo '    <button class="btn-action-small" onclick="unitLocation(this)"><i class="fas fa-location-arrow"></i> Track</button>';
+                            echo '  </div>';
+                            echo '</div>';
+                        }
+                    } else {
+                        echo '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
+                    }
+                    ?>
                     </div>
                 </div>
 
@@ -332,6 +270,24 @@ try {
     <?php /* include('includes/admin-footer.php') */ ?>
 
     <script>
+// Update unit status via AJAX
+function unitStatus(unitId, status) {
+    if (!unitId || !status) return;
+    fetch('api/unit_status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, status: status })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Failed to update unit status: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(() => alert('Network error.'));
+}
 let map;
 let markers = {};
 let QC_BOUNDS_GLOBAL;

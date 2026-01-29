@@ -112,4 +112,17 @@ function predictResourceNeeds($historicalData) {
 
     return callGeminiAPI($prompt);
 }
-?>
+
+/**
+ * Log activity
+ * @param PDO $pdo Database connection
+ * @param int $user_id User ID
+ * @param string $action Action performed
+ * @param string $entity_type Entity type
+ * @param int $entity_id Entity ID
+ * @param string $details Additional details
+ */
+function log_activity($pdo, $user_id, $action, $entity_type, $entity_id, $details = null) {
+    $stmt = $pdo->prepare("INSERT INTO activity_log (user_id, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$user_id, $action, $entity_type, $entity_id, $details]);
+}

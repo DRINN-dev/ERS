@@ -31,18 +31,28 @@ $user_role = $current_user ? ucfirst($current_user['role']) : 'Administrator';
     </div>
     
     <div class="admin-header-right">
-        <div class="header-actions">
+        <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
             <div class="notification-item">
                 <button class="notification-btn" aria-label="Notifications">
                     <i class="fas fa-bell"></i>
                     <span class="notification-badge">3</span>
                 </button>
             </div>
-            
             <div class="notification-item">
                 <button class="notification-btn" aria-label="Messages">
                     <i class="fas fa-envelope"></i>
                     <span class="notification-badge">5</span>
+                </button>
+            </div>
+            <div class="theme-toggle" style="margin-left: 0.75rem;">
+                <button class="theme-toggle-btn" data-theme="light" aria-label="Light Mode" onclick="ersSetTheme('light')">
+                    <i class="fas fa-desktop"></i>
+                </button>
+                <button class="theme-toggle-btn" data-theme="system" aria-label="System Mode" onclick="ersSetTheme('system')">
+                    <i class="fas fa-sun"></i>
+                </button>
+                <button class="theme-toggle-btn" data-theme="dark" aria-label="Dark Mode" onclick="ersSetTheme('dark')">
+                    <i class="fas fa-moon"></i>
                 </button>
             </div>
         </div>
@@ -60,6 +70,7 @@ $user_role = $current_user ? ucfirst($current_user['role']) : 'Administrator';
             <i class="fas fa-chevron-down dropdown-icon"></i>
         </div>
     </div>
+    <script src="CSS/theme-switcher.js"></script>
 </header>
 
 <!-- User Profile Dropdown -->
