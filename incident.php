@@ -335,6 +335,7 @@ $pageTitle = 'Incident Priority Management';
         const statusFilter = document.getElementById('status-filter');
         const typeFilter = document.getElementById('type-filter');
         const searchInput = document.getElementById('search');
+        let currentSearch = '';
 
         function applyFilters() {
             renderDynamicIncidents();
@@ -344,7 +345,10 @@ $pageTitle = 'Incident Priority Management';
         priorityFilter.addEventListener('change', fetchIncidents);
         statusFilter.addEventListener('change', fetchIncidents);
         typeFilter.addEventListener('change', fetchIncidents);
-        searchInput.addEventListener('input', fetchIncidents);
+        searchInput.addEventListener('input', function(e) {
+            currentSearch = e.target.value;
+            renderDynamicIncidents();
+        });
 
         // Update statistics
         function updateStats() {
@@ -400,7 +404,7 @@ $pageTitle = 'Incident Priority Management';
             const priorityValue = (priorityFilter.value || '').toLowerCase();
             const statusValue = (statusFilter.value || '').toLowerCase();
             const typeValue = (typeFilter.value || '').toLowerCase();
-            const searchValue = (searchInput.value || '').toLowerCase();
+            const searchValue = currentSearch.trim().toLowerCase();
 
             if (priorityValue && (i.priority || '').toLowerCase() !== priorityValue) return false;
 
@@ -428,10 +432,20 @@ $pageTitle = 'Incident Priority Management';
                 container.innerHTML = '<div class="incident-card empty">No incidents yet. Logged calls will appear here.</div>';
             } else {
                 let table = `<style>
+                    .incident-table-wrapper {
+                        width: 100%;
+                        overflow-x: auto;
+                        max-height: 420px;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                        background: #fff;
+                        margin-bottom: 1em;
+                    }
                     .incident-table {
                         width: 100%;
                         border-collapse: collapse;
                         font-size: 1.08rem;
+                        min-width: 900px;
                     }
                     .incident-table th, .incident-table td {
                         padding: 0.85em 1.1em;
@@ -441,12 +455,16 @@ $pageTitle = 'Incident Priority Management';
                     .incident-table th {
                         background: #f7f7f7;
                         font-size: 1.13rem;
+                        position: sticky;
+                        top: 0;
+                        z-index: 2;
                     }
                     .incident-table tr:nth-child(even) {
                         background: #fafbfc;
                     }
                 </style>
-                <table class=\"incident-table\">
+                <div class="incident-table-wrapper">
+                  <table class=\"incident-table\">
                     <thead>
                         <tr>
                             <th>Reference No</th>
@@ -462,7 +480,8 @@ $pageTitle = 'Incident Priority Management';
                     <tbody>
                         ${filtered.map(incidentCardHtml).join('')}
                     </tbody>
-                </table>`;
+                  </table>
+                </div>`;
                 container.innerHTML = table;
             }
             updateStats();
@@ -585,12 +604,26 @@ $pageTitle = 'Incident Priority Management';
             if (!modal) {
                 modal = document.createElement('div');
                 modal.id = 'incident-update-modal';
+                // Ensure Leaflet CSS/JS is loaded
+                if (!document.getElementById('leaflet-css')) {
+                    var lcss = document.createElement('link');
+                    lcss.rel = 'stylesheet';
+                    lcss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                    lcss.id = 'leaflet-css';
+                    document.head.appendChild(lcss);
+                }
+                if (!window.L) {
+                    var ljs = document.createElement('script');
+                    ljs.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                    ljs.onload = function() { setTimeout(initIncidentMap, 200); };
+                    document.body.appendChild(ljs);
+                }
                 modal.innerHTML = `
                     <div class="modal-backdrop"></div>
-                    <div class="modal-content">
+                    <div class="modal-content" style="min-width:480px;max-width:700px;">
                         <h3>Update Incident Details</h3>
                         <form id="modal-update-form">
-                            <label>Type<br>
+                            <lab el>Type<br>
                                 <input id="modal-type-input" type="text" required style="width:100%">
                             </label><br><br>
                             <label>Priority<br>
@@ -604,8 +637,9 @@ $pageTitle = 'Incident Priority Management';
                                 <textarea id="modal-desc-input" rows="4" required style="width:100%"></textarea>
                             </label><br><br>
                             <label>Location<br>
-                                <input id="modal-location-input" type="text" style="width:100%">
-                            </label><br><br>
+                                <input id="modal-location-input" type="text" style="width:100%" placeholder="Enter coordinates or address">
+                            </label><br>
+                            <!-- Map picker removed: now in call.php only -->
                             <label>Status<br>
                                 <select id="modal-status-input" style="width:100%">
                                     <option value="active">Active</option>
@@ -643,6 +677,35 @@ $pageTitle = 'Incident Priority Management';
             document.getElementById('modal-desc-input').value = incident.description || '';
             document.getElementById('modal-location-input').value = incident.location || incident.location_address || '';
             document.getElementById('modal-status-input').value = (incident.status || 'active').toLowerCase();
+            // Add Leaflet map picker for location
+            function initIncidentMap() {
+                if (window.L && document.getElementById('incident-location-map')) {
+                    var map = L.map('incident-location-map').setView([14.6760, 121.0437], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                    var marker;
+                    // If existing location, show marker
+                    var locVal = document.getElementById('modal-location-input').value;
+                    if (locVal && locVal.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                        var coords = locVal.split(',');
+                        marker = L.marker([parseFloat(coords[0]), parseFloat(coords[1])]).addTo(map);
+                        map.setView([parseFloat(coords[0]), parseFloat(coords[1])], 15);
+                    }
+                    map.on('click', function(e) {
+                        var latlng = e.latlng.lat.toFixed(6) + ',' + e.latlng.lng.toFixed(6);
+                        document.getElementById('modal-location-input').value = latlng;
+                        if (marker) {
+                            marker.setLatLng(e.latlng);
+                        } else {
+                            marker = L.marker(e.latlng).addTo(map);
+                        }
+                    });
+                }
+            }
+            setTimeout(function() {
+                if (window.L) initIncidentMap();
+            }, 400);
 
             // Cancel button
             document.getElementById('modal-cancel-btn').onclick = function() {

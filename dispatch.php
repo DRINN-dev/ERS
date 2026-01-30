@@ -54,8 +54,8 @@ try {
     <link rel="stylesheet" href="css/sidebar-footer.css">
     <link rel="stylesheet" href="CSS/cards.css">
     <link rel="stylesheet" href="css/dispatch.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 </head>
 <body>
     <!-- Include Sidebar Component -->
@@ -144,8 +144,8 @@ try {
                             echo '    </div>';
                             echo '  </div>';
                             echo '  <div class="call-actions">';
-                            echo '    <button class="btn-dispatch" onclick="dispatchUnit(this, \'' . addslashes($title) . '\')">Dispatch Unit</button>';
-                            echo '    <button class="btn-action-small" onclick="viewDetails(this)"><i class="fas fa-eye"></i> Details</button>';
+                                echo '    <button class="btn-dispatch" onclick="openDispatchModal(' . (int)$incident['id'] . ')">Dispatch Unit</button>';
+                                echo '    <button class="btn-action-small" onclick="viewDetails(this)"><i class="fas fa-eye"></i> Details</button>';
                             if ($phone) {
                                 echo '    <button class="btn-action-small" onclick="contactCaller(this)"><i class="fas fa-phone"></i> Call</button>';
                             }
@@ -266,8 +266,156 @@ try {
         </div>
     </div>
 
-    <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+
+        <!-- Dispatch Modal -->
+        <div id="dispatch-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+            <form class="modal-content" style="background:#fff; padding:2.5rem 2.5rem 2rem 2.5rem; border-radius:16px; max-width:600px; width:98%; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:1.2rem; min-height:350px;">
+                <span class="close" onclick="closeDispatchModal()" style="position:absolute; top:10px; right:20px; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2 style="margin:0 0 1.2rem 0; text-align:left; font-size:2rem; font-weight:700;">Dispatch Unit</h2>
+                <div style="display:flex; flex-direction:column; gap:1.1rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-weight:600;">Incident Details</label>
+                        <div id="modal-incident-details" style="background:#f8f9fa; border-radius:7px; padding:0.75rem 1rem; font-size:1rem;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label for="unit-select" style="font-weight:600;">Available Units <span style="color:red">*</span></label>
+                        <select id="unit-select" style="width:100%; padding:0.7rem; border-radius:6px; border:1.5px solid #bbb; font-size:1.08rem; background:#f9f9f9;">
+                            <option value="">-- Select --</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-weight:600;">Unit Details</label>
+                            <!-- Ilagay dito ang code para sa unit details -->
+                            <div id="unit-details" style="background:#f1f3f4; border-radius:7px; padding:0.75rem 1rem; min-height:48px; font-size:0.98rem;"></div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.2rem;">
+                    <button type="button" onclick="closeDispatchModal()" style="background:#f1f1f1; color:#333; border:none; border-radius:6px; padding:0.7rem 1.5rem; font-size:1rem; font-weight:500; cursor:pointer;">Cancel</button>
+                    <button id="confirm-dispatch-btn" type="button" class="btn-dispatch" style="background:#007bff; color:#fff; border:none; border-radius:6px; padding:0.7rem 1.5rem; font-size:1rem; font-weight:600; cursor:pointer;">Confirm Dispatch</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+        // Modal logic
+        let currentIncidentId = null;
+        function openDispatchModal(incidentId) {
+            currentIncidentId = incidentId;
+            document.getElementById('dispatch-modal').style.display = 'flex';
+            // Fetch incident details and available units
+            fetch('api/incident_details.php?id=' + encodeURIComponent(incidentId))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.incident) {
+                        const inc = data.incident;
+                        document.getElementById('modal-incident-details').innerHTML =
+                            `<strong>Type:</strong> ${inc.type || ''}<br>` +
+                            `<strong>Title:</strong> ${inc.title || ''}<br>` +
+                            `<strong>Location:</strong> ${inc.location || inc.address || 'N/A'}<br>` +
+                            (inc.latitude && inc.longitude ? `<strong>Coordinates:</strong> ${inc.latitude}, ${inc.longitude}<br>` : '') +
+                            `<strong>Priority:</strong> ${inc.priority || ''}`;
+                    } else {
+                        document.getElementById('modal-incident-details').innerHTML = '<span style="color:red">Incident not found.</span>';
+                    }
+                    // Populate units
+                    const select = document.getElementById('unit-select');
+                    select.innerHTML = '<option value="">-- Select --</option>';
+                    if (data.units && data.units.length) {
+                        data.units.forEach(u => {
+                            select.innerHTML += `<option value="${u.id}" data-type="${u.unit_type}" data-identifier="${u.identifier}">${u.identifier} (${u.unit_type})</option>`;
+                        });
+                    }
+                    document.getElementById('unit-details').innerHTML = '';
+                });
+        }
+        function closeDispatchModal() {
+            document.getElementById('dispatch-modal').style.display = 'none';
+            document.getElementById('modal-incident-details').innerHTML = '';
+            document.getElementById('unit-select').innerHTML = '<option value="">-- Select --</option>';
+            document.getElementById('unit-details').innerHTML = '';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('unit-select').addEventListener('change', function() {
+                const unitId = this.value;
+                if (!unitId) {
+                    document.getElementById('unit-details').innerHTML = '';
+                    return;
+                }
+                fetch('api/unit_details.php?id=' + encodeURIComponent(unitId))
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.unit) {
+                            const u = data.unit;
+                            document.getElementById('unit-details').innerHTML =
+                                `<strong>Driver:</strong> ${u.driver_name || 'N/A'}<br>` +
+                                `<strong>Plate #:</strong> ${u.plate_number || 'N/A'}<br>` +
+                                `<strong>Type:</strong> ${u.unit_type || ''}<br>` +
+                                `<strong>Status:</strong> ${u.status || ''}`;
+                        } else {
+                            document.getElementById('unit-details').innerHTML = '<span style="color:red">Unit not found.</span>';
+                        }
+                    });
+            });
+                        document.getElementById('confirm-dispatch-btn').onclick = function() {
+                                const unitSelect = document.getElementById('unit-select');
+                                const unitId = unitSelect.value;
+                                const selectedOption = unitSelect.options[unitSelect.selectedIndex];
+                                const unitIdentifier = selectedOption ? selectedOption.getAttribute('data-identifier') : '';
+                                if (!unitId || !currentIncidentId) {
+                                        alert('Please select a unit.');
+                                        return;
+                                }
+                                // Fetch incident details for routing
+                                fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId))
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        let inc = data.incident;
+                                        // Try to get coordinates from incident
+                                        let loc = inc && inc.location ? inc.location : (inc && inc.address ? inc.address : null);
+                                        let coords = null;
+                                        if (loc && loc.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                                            coords = loc.split(',').map(Number);
+                                        }
+                                        // Get unit marker position
+                                        let unitMarker = null;
+                                        for (let k in markers) {
+                                            if (markers[k].options && markers[k].options.title === unitIdentifier) {
+                                                unitMarker = markers[k];
+                                                break;
+                                            }
+                                        }
+                                        // Fallback: use hardcoded positions for demo units
+                                        if (!unitMarker) {
+                                            if (unitIdentifier === 'Police Unit 1') unitMarker = { getLatLng: () => ({lat:14.6500, lng:121.0300}) };
+                                            if (unitIdentifier === 'Fire Truck 1') unitMarker = { getLatLng: () => ({lat:14.6700, lng:121.0450}) };
+                                            if (unitIdentifier === 'Ambulance 1') unitMarker = { getLatLng: () => ({lat:14.6900, lng:121.0600}) };
+                                        }
+                                        if (coords && unitMarker) {
+                                            addRouteToIncident(unitMarker.getLatLng().lat, unitMarker.getLatLng().lng, coords[0], coords[1]);
+                                        }
+                                    });
+                                // Continue with dispatch
+                                fetch('api/dispatch_unit.php', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ incident_id: currentIncidentId, unit_id: unitId })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                        if (data.ok) {
+                                                // Redirect to GPS tracking page for the dispatched unit
+                                                window.location.href = 'gps.php?unit_id=' + encodeURIComponent(unitId) + (unitIdentifier ? ('&unit=' + encodeURIComponent(unitIdentifier)) : '');
+                                        } else {
+                                                alert('Failed to dispatch unit: ' + (data.error || 'Unknown error'));
+                                        }
+                                })
+                                .catch(() => alert('Network error.'));
+                        };
+        });
+        </script>
+
+        <!-- Uncomment if already have content -->
+        <?php /* include('includes/admin-footer.php') */ ?>
 
     <script>
 // Update unit status via AJAX
@@ -290,35 +438,63 @@ function unitStatus(unitId, status) {
 }
 let map;
 let markers = {};
+let incidentMarkers = {};
 let QC_BOUNDS_GLOBAL;
 
 // ===============================
 // LEAFLET MAP INITIALIZATION
 // ===============================
 function initMap() {
+    QC_BOUNDS_GLOBAL = L.latLngBounds(
+        [14.6000, 121.0000],
+        [14.7500, 121.1000]
+    );
+    map = L.map("map", {
+        center: [14.6760, 121.0437],
+        zoom: 13,
+        maxBounds: QC_BOUNDS_GLOBAL,
+        maxBoundsViscosity: 1.0
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+    // Pinpoint the three sample units added in the database
+    addMarker("police-unit-1", 14.6500, 121.0300, "🚓 Police Unit 1 - Station 1", "police");
+    addMarker("fire-truck-1", 14.6700, 121.0450, "🚒 Fire Truck 1 - Station 2", "fire");
+    addMarker("ambulance-1", 14.6900, 121.0600, "🚑 Ambulance 1 - Station 3", "ambulance");
+    // Load active incidents as markers
+    fetch('api/incidents_list.php?status=active')
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && data.items) {
+                data.items.forEach(inc => {
+                    // If incident has coordinates, use them; else skip (or geocode if you want)
+                    if (inc.location && inc.location.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                        const [lat, lng] = inc.location.split(',').map(Number);
+                        addIncidentMarker(inc.incident_code, lat, lng, inc.type + ' - ' + (inc.description || ''));
+                    }
+                });
+            }
+        });
+    console.log("✅ Dispatch map loaded (Leaflet)");
+}
 
-  QC_BOUNDS_GLOBAL = L.latLngBounds(
-    [14.6000, 121.0000],
-    [14.7500, 121.1000]
-  );
+function addIncidentMarker(id, lat, lng, info) {
+    if (incidentMarkers[id]) {
+        map.removeLayer(incidentMarkers[id]);
+    }
+    const marker = L.marker([lat, lng], { icon: getIncidentIcon() })
+        .addTo(map)
+        .bindPopup(`<strong>${info}</strong>`);
+    incidentMarkers[id] = marker;
+}
 
-  map = L.map("map", {
-    center: [14.6760, 121.0437],
-    zoom: 13,
-    maxBounds: QC_BOUNDS_GLOBAL,
-    maxBoundsViscosity: 1.0
-  });
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors"
-  }).addTo(map);
-
-  // Initial units
-  addMarker("ambulance-5", 14.6825, 121.0505, "🚑 Ambulance #5 - Available", "ambulance");
-  addMarker("police-8", 14.6672, 121.0603, "🚓 Police Unit #8 - En Route", "police");
-  addMarker("engine-12", 14.6954, 121.0321, "🚒 Engine #12 - Fire Emergency", "fire");
-
-  console.log("✅ Dispatch map loaded (Leaflet)");
+function getIncidentIcon() {
+    return L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
 }
 
 // ===============================
@@ -375,6 +551,8 @@ function clampToBounds(lat, lng) {
 
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="js/routing.js"></script>
 <script>
 // Lightweight URL param handling for context
 document.addEventListener('DOMContentLoaded', () => {

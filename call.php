@@ -129,13 +129,14 @@ $pageTitle = 'Emergency Call Center';
                                     </div>
                                     <div class="form-group">
                                         <label for="incidentLocation">Location</label>
-                                        <input type="text" id="incidentLocation" name="incidentLocation" placeholder="e.g., 123 Main St, District" required>
+                                        <input type="text" id="incidentLocation" name="incidentLocation" placeholder="Enter address or coordinates" required>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="incidentDescription">Description</label>
                                     <textarea id="incidentDescription" name="incidentDescription" placeholder="Brief description of the situation" required></textarea>
                                 </div>
+                                    <!-- Map picker removed as requested -->
                                 <div class="form-group">
                                     <label>Priority</label>
                                     <div class="priority-select" id="prioritySelect">

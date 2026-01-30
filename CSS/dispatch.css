@@ -18,7 +18,7 @@
 
         .dispatch-panel {
             background: var(--card-bg-1);
-            border-radius: 12px;
+            border-radius: 30px;
             padding: 1.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
@@ -150,7 +150,7 @@
 
         .map-container {
             background: #f8f9fa;
-            border: 1px solid #dee2e6;
+            border: 0px solid #dee2e6;
             border-radius: 8px;
             height: 300px;
             display: flex;
