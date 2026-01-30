@@ -1,3 +1,35 @@
+/* Modal overlay and content should always be clickable and above other elements */
+.resource-request-modal {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.45);
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+.resource-request-modal.show {
+    display: flex !important;
+    opacity: 1;
+}
+.resource-request-modal .modal-content {
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 2rem 1.5rem;
+    min-width: 340px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
 .resources-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
