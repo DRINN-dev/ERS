@@ -10,7 +10,7 @@ function saveOtpToDatabase($email, $otpCode, $expiryMinutes = 5) {
     return $stmt->execute([$email, $otpCode, $expiresAt]);
 }
 // Send OTP Email with HTML template
-function sendOtpEmail($to, $otpCode, $systemName = 'Emergency Response', $logoUrl = 'logo.svg') {
+function sendOtpEmail($to, $otpCode, $systemName = 'Emergency Response', $logoUrl = 'Email.png') {
     require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/PHPMailer.php';
     require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/SMTP.php';
     require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/Exception.php';
@@ -19,8 +19,8 @@ function sendOtpEmail($to, $otpCode, $systemName = 'Emergency Response', $logoUr
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com'; // Palitan ng SMTP server
     $mail->SMTPAuth = true;
-    $mail->Username = 'aldrinisidro24@gmail.com'; // Palitan ng SMTP username
-    $mail->Password = 'crbf unrm bdnk ybmx'; // Palitan ng SMTP password
+    $mail->Username = 'emergencyresponseteam8@gmail.com'; // Palitan ng SMTP username
+    $mail->Password = 'gsyk kbtn vzhq ryuw'; // Palitan ng SMTP password
     $mail->SMTPSecure = 'tls';
     $mail->Port = 587;
 
@@ -29,7 +29,7 @@ function sendOtpEmail($to, $otpCode, $systemName = 'Emergency Response', $logoUr
     $mail->isHTML(true);
     $mail->Subject = 'Your OTP Code';
 
-    $logoImg = $logoUrl ? '<img src="' . htmlspecialchars($logoUrl) . '" alt="' . htmlspecialchars($systemName) . ' Logo" style="height:40px; margin-bottom:10px;" />' : '';
+    $logoImg = $logoUrl ? '<img src="Email.png"' . htmlspecialchars($logoUrl) . '" alt="' . htmlspecialchars($systemName) . ' Logo" style="height:40px; margin-bottom:10px;" />' : '';
 
     $mail->Body = '
     <div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; border-radius: 8px; background: #fff; padding: 24px; border: 1px solid #eee;">

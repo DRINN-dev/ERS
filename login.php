@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $otp = rand(100000, 999999);
             $_SESSION['otp'] = $otp;
             $_SESSION['otp_email'] = $email;
-            $_SESSION['otp_expiry'] = time() + 300; // 5 minutes
-            saveOtpToDatabase($email, $otp, 5);
+            $_SESSION['otp_expiry'] = time() + 180; // 3 minutes
+            saveOtpToDatabase($email, $otp, 3);
             $mailSent = sendOtpEmail($email, $otp);
             if ($mailSent) {
                 header('Location: otp.php');
@@ -179,17 +179,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script src="js/login.js"></script>
     <script>
         // Password visibility toggle
         document.addEventListener('DOMContentLoaded', function() {
             const passwordToggle = document.getElementById('passwordToggle');
             const passwordInput = document.getElementById('password');
-            
             if (passwordToggle && passwordInput) {
                 passwordToggle.addEventListener('click', function() {
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                     passwordInput.setAttribute('type', type);
-                    
                     const icon = this.querySelector('i');
                     if (type === 'password') {
                         icon.classList.remove('fa-eye-slash');
@@ -202,5 +201,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     </script>
+    <style>
+    /* Spinner for Sign In button */
+    .btn-signin.loading {
+        opacity: 0.8;
+        pointer-events: none;
+    }
+    .btn-signin .spinner {
+        display: inline-block;
+        vertical-align: middle;
+    }
+    </style>
 </body>
 </html>
