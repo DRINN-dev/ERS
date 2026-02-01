@@ -111,7 +111,7 @@ try {
                         <span style="background: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $activeIncidents; ?> Active</span>
                     </div>
 
-                    <div style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
+                    <div id="active-calls-container" style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
                     <?php
                     // Fetch all active incidents (pending/dispatched)
                     $incidents = [];
@@ -145,10 +145,11 @@ try {
                             echo '  </div>';
                             echo '  <div class="call-actions">';
                                 echo '    <button class="btn-dispatch" onclick="openDispatchModal(' . (int)$incident['id'] . ')">Dispatch Unit</button>';
-                                echo '    <button class="btn-action-small" onclick="viewDetails(this)"><i class="fas fa-eye"></i> Details</button>';
+                                echo '    <button class="btn-action-small" onclick="viewDetails(this)" data-incident-id="' . (int)$incident['id'] . '"><i class="fas fa-eye"></i> Details</button>';
                             if ($phone) {
-                                echo '    <button class="btn-action-small" onclick="contactCaller(this)"><i class="fas fa-phone"></i> Call</button>';
+                                echo '    <button class="btn-action-small" onclick="contactCaller(this)" data-phone="' . htmlspecialchars($phone) . '"><i class="fas fa-phone"></i> Call</button>';
                             }
+                            echo '    <button class="btn-action-small" onclick="resolveIncident(this)" data-incident-id="' . (int)$incident['id'] . '"><i class="fas fa-check"></i> Resolve</button>';
                             echo '  </div>';
                             echo '</div>';
                         }
@@ -167,9 +168,10 @@ try {
                             Available Units
                         </h2>
                         <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
+                        <button class="btn-action-small" style="margin-left:8px" onclick="resetLastUnits()"><i class="fas fa-undo"></i> Reset 2</button>
                     </div>
 
-                    <div style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
+                    <div id="available-units-container" style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
                     <?php
                     // Fetch only available units
                     $units = [];
@@ -192,8 +194,8 @@ try {
                             echo '    </div>';
                             echo '  </div>';
                             echo '  <div class="unit-actions">';
-                            echo '    <button class="btn-action-small" onclick="unitStatus(' . (int)$unit['id'] . ', \'busy\')"><i class="fas fa-play"></i> Deploy</button>';
-                            echo '    <button class="btn-action-small" onclick="unitLocation(this)"><i class="fas fa-location-arrow"></i> Track</button>';
+                            echo '    <button class="btn-action-small" onclick="deployUnitToIncident(' . (int)$unit['id'] . ')"><i class="fas fa-play"></i> Deploy</button>';
+                            echo '    <button class="btn-action-small" onclick="unitLocation(this)" data-unit-id="' . (int)$unit['id'] . '" data-identifier="' . htmlspecialchars($unit['identifier']) . '"><i class="fas fa-location-arrow"></i> Track</button>';
                             echo '  </div>';
                             echo '</div>';
                         }
@@ -299,6 +301,8 @@ try {
         <script>
         // Modal logic
         let currentIncidentId = null;
+        let currentIncidentLat = null;
+        let currentIncidentLng = null;
         function openDispatchModal(incidentId) {
             currentIncidentId = incidentId;
             document.getElementById('dispatch-modal').style.display = 'flex';
@@ -308,10 +312,12 @@ try {
                 .then(data => {
                     if (data.incident) {
                         const inc = data.incident;
+                        currentIncidentLat = inc && inc.latitude ? Number(inc.latitude) : null;
+                        currentIncidentLng = inc && inc.longitude ? Number(inc.longitude) : null;
                         document.getElementById('modal-incident-details').innerHTML =
                             `<strong>Type:</strong> ${inc.type || ''}<br>` +
                             `<strong>Title:</strong> ${inc.title || ''}<br>` +
-                            `<strong>Location:</strong> ${inc.location || inc.address || 'N/A'}<br>` +
+                            `<strong>Location:</strong> ${inc.location_address || 'N/A'}<br>` +
                             (inc.latitude && inc.longitude ? `<strong>Coordinates:</strong> ${inc.latitude}, ${inc.longitude}<br>` : '') +
                             `<strong>Priority:</strong> ${inc.priority || ''}`;
                     } else {
@@ -346,16 +352,32 @@ try {
                     .then(data => {
                         if (data.unit) {
                             const u = data.unit;
-                            document.getElementById('unit-details').innerHTML =
+                            let html =
                                 `<strong>Driver:</strong> ${u.driver_name || 'N/A'}<br>` +
                                 `<strong>Plate #:</strong> ${u.plate_number || 'N/A'}<br>` +
                                 `<strong>Type:</strong> ${u.unit_type || ''}<br>` +
                                 `<strong>Status:</strong> ${u.status || ''}`;
+                            if (currentIncidentLat && currentIncidentLng && u.latitude && u.longitude) {
+                                const distKm = haversine(Number(u.latitude), Number(u.longitude), currentIncidentLat, currentIncidentLng).toFixed(2);
+                                html += `<br><strong>Distance to Incident:</strong> ${distKm} km`;
+                            }
+                            document.getElementById('unit-details').innerHTML = html;
                         } else {
                             document.getElementById('unit-details').innerHTML = '<span style="color:red">Unit not found.</span>';
                         }
                     });
             });
+            function haversine(lat1, lon1, lat2, lon2) {
+                const R = 6371; // km
+                const toRad = d => d * Math.PI / 180;
+                const dLat = toRad(lat2 - lat1);
+                const dLon = toRad(lon2 - lon1);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
                         document.getElementById('confirm-dispatch-btn').onclick = function() {
                                 const unitSelect = document.getElementById('unit-select');
                                 const unitId = unitSelect.value;
@@ -365,51 +387,66 @@ try {
                                         alert('Please select a unit.');
                                         return;
                                 }
-                                // Fetch incident details for routing
-                                fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId))
-                                    .then(r => r.json())
-                                    .then(data => {
-                                        let inc = data.incident;
-                                        // Try to get coordinates from incident
-                                        let loc = inc && inc.location ? inc.location : (inc && inc.address ? inc.address : null);
-                                        let coords = null;
-                                        if (loc && loc.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
-                                            coords = loc.split(',').map(Number);
-                                        }
-                                        // Get unit marker position
-                                        let unitMarker = null;
-                                        for (let k in markers) {
-                                            if (markers[k].options && markers[k].options.title === unitIdentifier) {
-                                                unitMarker = markers[k];
-                                                break;
-                                            }
-                                        }
-                                        // Fallback: use hardcoded positions for demo units
-                                        if (!unitMarker) {
-                                            if (unitIdentifier === 'Police Unit 1') unitMarker = { getLatLng: () => ({lat:14.6500, lng:121.0300}) };
-                                            if (unitIdentifier === 'Fire Truck 1') unitMarker = { getLatLng: () => ({lat:14.6700, lng:121.0450}) };
-                                            if (unitIdentifier === 'Ambulance 1') unitMarker = { getLatLng: () => ({lat:14.6900, lng:121.0600}) };
-                                        }
-                                        if (coords && unitMarker) {
-                                            addRouteToIncident(unitMarker.getLatLng().lat, unitMarker.getLatLng().lng, coords[0], coords[1]);
-                                        }
-                                    });
-                                // Continue with dispatch
-                                fetch('api/dispatch_unit.php', {
+                                // Fetch incident & unit details to compute routing and pass to GPS
+                                Promise.all([
+                                    fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId)).then(r => r.json()),
+                                    fetch('api/unit_details.php?id=' + encodeURIComponent(unitId)).then(r => r.json())
+                                ]).then(([incRes, unitRes]) => {
+                                    const inc = incRes.incident || {};
+                                    const u = unitRes.unit || {};
+                                    let toLat = null, toLng = null;
+                                    if (inc.latitude && inc.longitude) {
+                                        toLat = Number(inc.latitude);
+                                        toLng = Number(inc.longitude);
+                                    } else if (inc.location_address && inc.location_address.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                                        const parts = inc.location_address.split(',').map(Number);
+                                        toLat = parts[0];
+                                        toLng = parts[1];
+                                    }
+                                    let fromLat = null, fromLng = null;
+                                    if (u.latitude && u.longitude) {
+                                        fromLat = Number(u.latitude);
+                                        fromLng = Number(u.longitude);
+                                    } else {
+                                        // Fallback and persist station coordinates based on unit type
+                                        const type = selectedOption ? selectedOption.getAttribute('data-type') : (u.unit_type || 'other');
+                                        if (type === 'police') { fromLat = 14.6500; fromLng = 121.0300; }
+                                        else if (type === 'fire') { fromLat = 14.6700; fromLng = 121.0450; }
+                                        else if (type === 'ambulance') { fromLat = 14.6900; fromLng = 121.0600; }
+                                        else { fromLat = 14.6760; fromLng = 121.0437; }
+                                        return fetch('api/unit_location_update.php', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ unit_id: unitId, latitude: fromLat, longitude: fromLng })
+                                        }).then(() => ({ inc, u, toLat, toLng, fromLat, fromLng }));
+                                    }
+                                    // Plot locally if possible
+                                    if (typeof addRouteToIncident === 'function' && fromLat && fromLng && toLat && toLng) {
+                                        addRouteToIncident(fromLat, fromLng, toLat, toLng);
+                                    }
+                                    // Continue with dispatch
+                                    return fetch('api/dispatch_unit.php', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ incident_id: currentIncidentId, unit_id: unitId })
-                                })
-                                .then(r => r.json())
-                                .then(data => {
-                                        if (data.ok) {
-                                                // Redirect to GPS tracking page for the dispatched unit
-                                                window.location.href = 'gps.php?unit_id=' + encodeURIComponent(unitId) + (unitIdentifier ? ('&unit=' + encodeURIComponent(unitIdentifier)) : '');
-                                        } else {
-                                                alert('Failed to dispatch unit: ' + (data.error || 'Unknown error'));
+                                    }).then(r => r.json()).then(data => ({ data, fromLat, fromLng, toLat, toLng }));
+                                }).then(({ data, fromLat, fromLng, toLat, toLng }) => {
+                                    if (data.ok) {
+                                        // Redirect to GPS with routing params
+                                        const qp = new URLSearchParams();
+                                        qp.set('unit_id', unitId);
+                                        if (unitIdentifier) qp.set('unit', unitIdentifier);
+                                        if (fromLat && fromLng && toLat && toLng) {
+                                            qp.set('from_lat', String(fromLat));
+                                            qp.set('from_lng', String(fromLng));
+                                            qp.set('to_lat', String(toLat));
+                                            qp.set('to_lng', String(toLng));
                                         }
-                                })
-                                .catch(() => alert('Network error.'));
+                                        window.location.href = 'gps.php?' + qp.toString();
+                                    } else {
+                                        alert('Failed to dispatch unit: ' + (data.error || 'Unknown error'));
+                                    }
+                                }).catch(() => alert('Network error.'));
                         };
         });
         </script>
@@ -554,6 +591,193 @@ function clampToBounds(lat, lng) {
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="js/routing.js"></script>
 <script>
+// Fallback: populate Available Units panel from API if server-side rendering produced none
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const container = document.getElementById('available-units-container');
+        if (!container) return;
+        const hasCards = container.querySelector('.unit-card');
+        if (hasCards) return; // already rendered from PHP
+        fetch('api/units_list.php?status=available')
+            .then(r => r.json())
+            .then(res => {
+                if (!res.ok) return;
+                const items = res.items || [];
+                if (!items.length) {
+                    container.innerHTML = '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
+                    return;
+                }
+                container.innerHTML = '';
+                items.forEach(u => {
+                    const meta = [];
+                    if (u.unit_type) meta.push(u.unit_type.charAt(0).toUpperCase() + u.unit_type.slice(1));
+                    const card = document.createElement('div');
+                    card.className = 'unit-card available';
+                    card.innerHTML = `
+                        <div class="unit-info">
+                            <div class="unit-details">
+                                <div class="unit-name">${escapeHtml(u.identifier)}</div>
+                                <div class="unit-meta">
+                                    <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(u.unit_type || '')}</span>
+                                    ${meta.length ? '<span>' + meta.join(' | ') + '</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="unit-actions">
+                            <button class="btn-action-small" onclick="deployUnitToIncident(${u.id})"><i class="fas fa-play"></i> Deploy</button>
+                            <button class="btn-action-small" onclick="unitLocation(this)" data-unit-id="${u.id}" data-identifier="${escapeAttr(u.identifier)}"><i class="fas fa-location-arrow"></i> Track</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(() => {});
+    } catch (e) {}
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'})[c] || c);
+    }
+    function escapeAttr(s) {
+        return String(s || '').replace(/['"]/g, '_');
+    }
+});
+</script>
+<script>
+// --------- UI Handlers for Quick Actions and Cards ---------
+function postJSON(url, payload) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+    }).then(r => r.json());
+}
+
+function emergencyBroadcast() {
+    const msg = prompt('Broadcast message:');
+    if (!msg) return;
+    postJSON('api/activity_event.php', { action: 'broadcast', entity_type: 'system', details: msg })
+        .then(() => showNotification('Emergency broadcast sent', 'success'))
+        .catch(() => showNotification('Broadcast failed', 'error'));
+}
+
+function lockdownProtocol() {
+    if (!confirm('Activate lockdown protocol?')) return;
+    postJSON('api/activity_event.php', { action: 'lockdown', entity_type: 'system', details: 'Lockdown initiated by dispatch' })
+        .then(() => showNotification('Lockdown protocol activated', 'warning'))
+        .catch(() => showNotification('Lockdown failed', 'error'));
+}
+
+function massCasualty() {
+    const info = prompt('Mass casualty details (location/resources):');
+    if (!info) return;
+    postJSON('api/activity_event.php', { action: 'mci', entity_type: 'incident', details: info })
+        .then(() => showNotification('MCI protocol logged', 'info'))
+        .catch(() => showNotification('MCI log failed', 'error'));
+}
+
+function resourceRequest() {
+    const name = prompt('Resource name (e.g., Ventilator, Ambulance)');
+    if (!name) return;
+    const qty = prompt('Quantity', '1');
+    const form = new FormData();
+    form.append('requestor', 'Dispatch Center');
+    form.append('resource_name', name);
+    form.append('resource_type', 'other');
+    form.append('quantity', qty || '1');
+    form.append('priority', 'high');
+    form.append('location', 'Dispatch HQ');
+    form.append('notes', 'Auto-request via dispatch UI');
+    form.append('urgency', 'urgent');
+    fetch('api/request_resource.php', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(res => {
+            if (res && (res.ok || res.success)) {
+                showNotification('Resource request submitted', 'success');
+            } else {
+                showNotification('Resource request failed', 'error');
+            }
+        })
+        .catch(() => showNotification('Network error', 'error'));
+}
+
+function viewDetails(btn) {
+    const card = btn.closest('.call-card');
+    // Try to extract incident id
+    const idAttr = btn.getAttribute('data-incident-id');
+    const incidentId = idAttr ? Number(idAttr) : currentIncidentId;
+    if (!incidentId) { alert('Incident not found'); return; }
+    fetch('api/incident_details.php?id=' + encodeURIComponent(incidentId))
+        .then(r => r.json())
+        .then(data => {
+            const inc = data.incident || {};
+            alert(
+                'Incident Details\n\n' +
+                'Type: ' + (inc.type || '-') + '\n' +
+                'Title: ' + (inc.title || '-') + '\n' +
+                'Location: ' + (inc.location_address || '-') + '\n' +
+                'Priority: ' + (inc.priority || '-')
+            );
+        });
+}
+
+function contactCaller(btn) {
+    const phone = btn.getAttribute('data-phone');
+    if (!phone) { alert('No phone number'); return; }
+    window.location.href = 'tel:' + encodeURIComponent(phone);
+}
+
+function unitLocation(btn) {
+    const unitId = btn.getAttribute('data-unit-id');
+    const unitName = btn.getAttribute('data-identifier');
+    const qp = new URLSearchParams();
+    if (unitId) qp.set('unit_id', unitId);
+    if (unitName) qp.set('unit', unitName);
+    window.location.href = 'gps.php?' + qp.toString();
+}
+
+function refreshAIRecommendations() {
+    fetch('api/ai_recommendations.php')
+        .then(r => r.json())
+        .then(res => {
+            const el = document.getElementById('ai-recommendations-content');
+            if (res.ok && res.text) {
+                el.innerHTML = '<div class="ai-recommendation-text">' +
+                    res.text.replace(/\n/g, '<br>') + '</div>';
+                showNotification('AI recommendations updated', 'success');
+            } else {
+                showNotification('AI service unavailable', 'error');
+            }
+        })
+        .catch(() => showNotification('Network error', 'error'));
+}
+
+// Incident-aware deploy: prompt for incident ID and dispatch
+function deployUnitToIncident(unitId) {
+    if (!unitId) { alert('Unit ID missing'); return; }
+    const incidentIdStr = prompt('Enter Incident ID to dispatch this unit (leave blank to just mark Assigned):');
+    const incidentId = incidentIdStr ? Number(incidentIdStr) : null;
+    if (incidentId) {
+        fetch('api/dispatch_unit.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ incident_id: incidentId, unit_id: unitId })
+        }).then(r => r.json())
+        .then(res => {
+            if (res && res.ok) {
+                showNotification('Unit dispatched to incident', 'success');
+                refreshActiveCalls();
+                refreshAvailableUnits();
+            } else {
+                showNotification('Failed to dispatch unit', 'error');
+            }
+        }).catch(() => showNotification('Network error', 'error'));
+    } else {
+        // Fallback: just mark unit assigned without incident linkage
+        unitStatus(unitId, 'assigned');
+    }
+}
+</script>
+<script>
 // Lightweight URL param handling for context
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -571,6 +795,312 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 });
+</script>
+<script>
+// Fallback: populate Active Emergency Calls from API when server-side list is empty
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const container = document.getElementById('active-calls-container');
+        if (!container) return;
+        const hasCards = container.querySelector('.call-card');
+        if (hasCards) return; // server-side rendered
+        fetch('api/incidents_list.php?status=active')
+            .then(r => r.json())
+            .then(res => {
+                if (!res.ok) return;
+                const items = res.items || [];
+                if (!items.length) {
+                    container.innerHTML = '<div class="call-card"><div class="call-info"><div class="call-details"><div class="call-title">No active emergency calls.</div></div></div></div>';
+                    return;
+                }
+                container.innerHTML = '';
+                items.forEach(it => {
+                    const prio = (it.priority || 'medium').toLowerCase();
+                    const prioClass = prio === 'high' ? 'high' : (prio === 'low' ? 'low' : 'medium');
+                    const minsAgo = (() => { try { return Math.max(0, Math.floor((Date.now() - new Date(it.created_at).getTime()) / 60000)); } catch(e) { return 0; } })();
+                    const timeAgo = minsAgo < 1 ? 'Just now' : (minsAgo + ' min ago');
+                    const title = it.title || it.type || 'Incident';
+                    const caller = it.caller_name || 'Unknown';
+                    const phone = it.caller_phone || '';
+                    const card = document.createElement('div');
+                    card.className = 'call-card ' + prioClass;
+                    card.innerHTML = `
+                        <div class="call-info">
+                            <div class="call-details">
+                                <div class="call-title">${escapeHtml(title)}</div>
+                                <div class="call-meta">
+                                    <span><i class="fas fa-clock"></i> ${escapeHtml(timeAgo)}</span>
+                                    <span><i class="fas fa-user"></i> ${escapeHtml(caller)}</span>
+                                    <span class="status-indicator status-${prioClass}"></span> ${prio.charAt(0).toUpperCase() + prio.slice(1)} Priority
+                                </div>
+                            </div>
+                        </div>
+                        <div class="call-actions">
+                            <button class="btn-dispatch" onclick="openDispatchModal(${it.id})">Dispatch Unit</button>
+                            <button class="btn-action-small" onclick="viewDetails(this)" data-incident-id="${it.id}"><i class="fas fa-eye"></i> Details</button>
+                            ${phone ? `<button class=\"btn-action-small\" onclick=\"contactCaller(this)\" data-phone=\"${escapeAttr(phone)}\"><i class=\"fas fa-phone\"></i> Call</button>` : ''}
+                            <button class="btn-action-small" onclick="resolveIncident(this)" data-incident-id="${it.id}"><i class="fas fa-check"></i> Resolve</button>
+                        </div>`;
+                    container.appendChild(card);
+                });
+            })
+            .catch(() => {});
+    } catch (e) {}
+
+    function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'})[c] || c); }
+    function escapeAttr(s) { return String(s || '').replace(/['"]/g, '_'); }
+});
+</script>
+</script>
+<script>
+// Quick Action Handlers
+function postJSON(url, payload) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+    }).then(r => r.json());
+}
+
+function emergencyBroadcast() {
+    const msg = prompt('Broadcast message to all units:');
+    if (!msg) return;
+    postJSON('api/activity_event.php', {
+        action: 'broadcast',
+        entity_type: 'system',
+        details: msg
+    }).then(res => {
+        if (res.ok) {
+            showNotification('Emergency broadcast sent', 'success');
+        } else {
+            alert('Failed to send broadcast');
+        }
+    }).catch(() => alert('Network error'));
+}
+
+function lockdownProtocol() {
+    if (!confirm('Activate lockdown protocol?')) return;
+    postJSON('api/activity_event.php', {
+        action: 'lockdown',
+        entity_type: 'system',
+        details: 'City-wide lockdown activated from Dispatch Center'
+    }).then(res => {
+        if (res.ok) {
+            showNotification('Lockdown protocol activated', 'warning');
+        } else {
+            alert('Failed to activate protocol');
+        }
+    }).catch(() => alert('Network error'));
+}
+
+function massCasualty() {
+    const info = prompt('Describe mass casualty incident (location/details):');
+    if (!info) return;
+    postJSON('api/activity_event.php', {
+        action: 'mci_alert',
+        entity_type: 'incident',
+        details: info
+    }).then(res => {
+        if (res.ok) {
+            showNotification('Mass casualty alert recorded', 'error');
+        } else {
+            alert('Failed to record alert');
+        }
+    }).catch(() => alert('Network error'));
+}
+
+function resourceRequest() {
+    const name = prompt('Resource name (e.g., Ambulance, Ventilator):');
+    if (!name) return;
+    const qty = parseInt(prompt('Quantity:'), 10) || 1;
+    const fd = new FormData();
+    fd.append('requestor', 'Dispatch Center');
+    fd.append('resource_name', name);
+    fd.append('resource_type', 'other');
+    fd.append('quantity', String(qty));
+    fd.append('priority', 'high');
+    fd.append('location', 'Dispatch HQ');
+    fd.append('notes', 'Requested via quick action');
+    fd.append('urgency', 'urgent');
+    fetch('api/request_resource.php', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          showNotification('Resource request submitted', 'success');
+        } else {
+          // Fallback: log activity
+          postJSON('api/activity_event.php', {
+            action: 'resource_request',
+            entity_type: 'resource',
+            details: JSON.stringify({ name, qty })
+          }).then(() => showNotification('Request logged', 'info'));
+        }
+      })
+      .catch(() => alert('Network error'));
+}
+
+// Card action handlers
+function viewDetails(btn) {
+    const id = btn && btn.dataset ? btn.dataset.incidentId : null;
+    if (!id) { alert('Incident ID missing'); return; }
+    fetch('api/incident_details.php?id=' + encodeURIComponent(id))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.incident) { alert('Incident not found'); return; }
+        const inc = data.incident;
+        const lines = [
+          'Type: ' + (inc.type || ''),
+          'Title: ' + (inc.title || ''),
+          'Priority: ' + (inc.priority || ''),
+          'Location: ' + (inc.location_address || 'N/A')
+        ];
+        alert(lines.join('\n'));
+      });
+}
+
+function contactCaller(btn) {
+    const phone = btn && btn.dataset ? btn.dataset.phone : '';
+    if (!phone) { alert('No phone number available'); return; }
+    window.location.href = 'tel:' + phone;
+}
+
+function unitLocation(btn) {
+    const unitId = btn && btn.dataset ? btn.dataset.unitId : '';
+    const identifier = btn && btn.dataset ? btn.dataset.identifier : '';
+    if (!unitId) { alert('Unit ID missing'); return; }
+    window.location.href = 'gps.php?unit_id=' + encodeURIComponent(unitId) + (identifier ? ('&unit=' + encodeURIComponent(identifier)) : '');
+}
+
+function refreshAIRecommendations() {
+    fetch('api/ai_recommendations.php')
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('ai-recommendations-content');
+        if (data.ok && data.text) {
+            el.innerHTML = '<div class="ai-recommendation-text">' + (data.text || '').replace(/\n/g, '<br>') + '</div>';
+        } else {
+            el.innerHTML = '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> Unable to generate AI recommendations at this time.</div>';
+        }
+      })
+      .catch(() => alert('Network error'));
+}
+
+// Resolve incident and refresh panels
+function resolveIncident(btn) {
+    const id = btn && btn.dataset ? Number(btn.dataset.incidentId) : null;
+    if (!id) { alert('Incident ID missing'); return; }
+    const note = `Resolved via Dispatch UI at ${new Date().toLocaleString()}`;
+    fetch('api/incident_resolve.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incident_id: id, note })
+    }).then(r => r.json())
+    .then(res => {
+        if (res && res.ok) {
+            showNotification('Incident resolved. Units released to available.', 'success');
+            refreshActiveCalls();
+            refreshAvailableUnits();
+        } else {
+            showNotification('Failed to resolve incident', 'error');
+        }
+    }).catch(() => showNotification('Network error', 'error'));
+}
+
+function refreshActiveCalls() {
+    const container = document.getElementById('active-calls-container');
+    if (!container) return;
+    fetch('api/incidents_list.php?status=active')
+      .then(r => r.json())
+      .then(res => {
+        if (!res.ok) return;
+        const items = res.items || [];
+        if (!items.length) {
+            container.innerHTML = '<div class="call-card"><div class="call-info"><div class="call-details"><div class="call-title">No active emergency calls.</div></div></div></div>';
+            return;
+        }
+        container.innerHTML = '';
+        items.forEach(it => {
+            const prio = (it.priority || 'medium').toLowerCase();
+            const prioClass = prio === 'high' ? 'high' : (prio === 'low' ? 'low' : 'medium');
+            const minsAgo = (() => { try { return Math.max(0, Math.floor((Date.now() - new Date(it.created_at).getTime()) / 60000)); } catch(e) { return 0; } })();
+            const timeAgo = minsAgo < 1 ? 'Just now' : (minsAgo + ' min ago');
+            const title = it.title || it.type || 'Incident';
+            const caller = it.caller_name || 'Unknown';
+            const phone = it.caller_phone || '';
+            const card = document.createElement('div');
+            card.className = 'call-card ' + prioClass;
+            card.innerHTML = `
+                <div class=\"call-info\">
+                    <div class=\"call-details\">
+                        <div class=\"call-title\">${escapeHtml(title)}</div>
+                        <div class=\"call-meta\">
+                            <span><i class=\"fas fa-clock\"></i> ${escapeHtml(timeAgo)}</span>
+                            <span><i class=\"fas fa-user\"></i> ${escapeHtml(caller)}</span>
+                            <span class=\"status-indicator status-${prioClass}\"></span> ${prio.charAt(0).toUpperCase() + prio.slice(1)} Priority
+                        </div>
+                    </div>
+                </div>
+                <div class=\"call-actions\">
+                    <button class=\"btn-dispatch\" onclick=\"openDispatchModal(${it.id})\">Dispatch Unit</button>
+                    <button class=\"btn-action-small\" onclick=\"viewDetails(this)\" data-incident-id=\"${it.id}\"><i class=\"fas fa-eye\"></i> Details</button>
+                    ${phone ? `<button class=\\\"btn-action-small\\\" onclick=\\\"contactCaller(this)\\\" data-phone=\\\"${escapeAttr(phone)}\\\"><i class=\\\"fas fa-phone\\\"></i> Call</button>` : ''}
+                    <button class=\"btn-action-small\" onclick=\"resolveIncident(this)\" data-incident-id=\"${it.id}\"><i class=\"fas fa-check\"></i> Resolve</button>
+                </div>`;
+            container.appendChild(card);
+        });
+      }).catch(() => {});
+}
+
+function refreshAvailableUnits() {
+    const container = document.getElementById('available-units-container');
+    if (!container) return;
+    fetch('api/units_list.php?status=available')
+      .then(r => r.json())
+      .then(res => {
+        if (!res.ok) return;
+        const items = res.items || [];
+        if (!items.length) {
+            container.innerHTML = '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
+            return;
+        }
+        container.innerHTML = '';
+        items.forEach(u => {
+            const meta = [];
+            if (u.unit_type) meta.push(u.unit_type.charAt(0).toUpperCase() + u.unit_type.slice(1));
+            const card = document.createElement('div');
+            card.className = 'unit-card available';
+            card.innerHTML = `
+                <div class=\"unit-info\">
+                    <div class=\"unit-details\">
+                        <div class=\"unit-name\">${escapeHtml(u.identifier)}</div>
+                        <div class=\"unit-meta\">
+                            <span><i class=\"fas fa-map-marker-alt\"></i> ${escapeHtml(u.unit_type || '')}</span>
+                            ${meta.length ? '<span>' + meta.join(' | ') + '</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class=\"unit-actions\">
+                    <button class=\"btn-action-small\" onclick=\"unitStatus(${u.id}, 'assigned')\"><i class=\"fas fa-play\"></i> Deploy</button>
+                    <button class=\"btn-action-small\" onclick=\"unitLocation(this)\" data-unit-id=\"${u.id}\" data-identifier=\"${escapeAttr(u.identifier)}\"><i class=\"fas fa-location-arrow\"></i> Track</button>
+                </div>`;
+            container.appendChild(card);
+        });
+      }).catch(() => {});
+}
+
+function resetLastUnits() {
+    fetch('api/reset_units.php', { method: 'POST' })
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok) {
+            showNotification('Reset complete: last 2 units set to available', 'success');
+            refreshAvailableUnits();
+        } else {
+            showNotification('Failed to reset units', 'error');
+        }
+      })
+      .catch(() => showNotification('Network error', 'error'));
+}
 </script>
 </body>
 </html>

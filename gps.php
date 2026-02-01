@@ -106,68 +106,7 @@ $pageTitle = 'GPS Tracking System';
                         Unit Status & Dispatched
                     </h3>
                     <!-- Scrollable container for units -->
-                    <div class="unit-scroll-container">
-                        <!-- Example: Dispatched/Enroute/Emergency units -->
-                        <div class="unit-card enroute" data-unit="police-8">
-                            <div class="unit-header">
-                                <div>
-                                    <h4 class="unit-name">Police Unit #8</h4>
-                                    <span class="unit-status status-enroute">Dispatched (En Route)</span>
-                                </div>
-                            </div>
-                            <div class="unit-details">
-                                <div><i class="fas fa-map-marker-alt"></i> Downtown</div>
-                            </div>
-                            <div class="unit-actions">
-                                <button class="btn-unit" onclick="trackUnit('police-8')">
-                                    <i class="fas fa-location-arrow"></i> Track
-                                </button>
-                                <button class="btn-unit" onclick="unitHistory('police-8')">
-                                    <i class="fas fa-history"></i> History
-                                </button>
-                            </div>
-                        </div>
-                        <div class="unit-card emergency" data-unit="engine-12">
-                            <div class="unit-header">
-                                <div>
-                                    <h4 class="unit-name">Engine #12</h4>
-                                    <span class="unit-status status-emergency">Dispatched (Emergency)</span>
-                                </div>
-                            </div>
-                            <div class="unit-details">
-                                <div><i class="fas fa-map-marker-alt"></i> Residential Area</div>
-                            </div>
-                            <div class="unit-actions">
-                                <button class="btn-unit" onclick="trackUnit('engine-12')">
-                                    <i class="fas fa-location-arrow"></i> Track
-                                </button>
-                                <button class="btn-unit" onclick="unitHistory('engine-12')">
-                                    <i class="fas fa-history"></i> History
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Example: Available unit -->
-                        <div class="unit-card active" data-unit="ambulance-5">
-                            <div class="unit-header">
-                                <div>
-                                    <h4 class="unit-name">Ambulance #5</h4>
-                                    <span class="unit-status status-active">Available</span>
-                                </div>
-                            </div>
-                            <div class="unit-details">
-                                <div><i class="fas fa-map-marker-alt"></i> Station 1</div>
-                            </div>
-                            <div class="unit-actions">
-                                <button class="btn-unit" onclick="trackUnit('ambulance-5')">
-                                    <i class="fas fa-location-arrow"></i> Track
-                                </button>
-                                <button class="btn-unit" onclick="unitHistory('ambulance-5')">
-                                    <i class="fas fa-history"></i> History
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Add more units as needed -->
-                    </div>
+                    <div class="unit-scroll-container" id="unit-scroll-container"></div>
                 </div>
             </div>
 
@@ -303,10 +242,9 @@ function initMap() {
     attribution: "© OpenStreetMap contributors"
   }).addTo(map);
 
-  // === SAMPLE UNITS ===
-  addUnitMarker("ambulance-5", 14.6825, 121.0505, "Ambulance #5", "ambulance");
-  addUnitMarker("police-8", 14.6672, 121.0603, "Police Unit #8", "police");
-  addUnitMarker("engine-12", 14.6954, 121.0321, "Engine #12", "fire");
+    // Load units from API and render
+    loadDispatchedUnits();
+    loadAvailableUnits();
 
   initRoutes();
 
@@ -320,7 +258,22 @@ function initMap() {
     // Ensure visibility respects current activeLayers on load
     updateMapVisibility();
 
-  console.log("✅ Leaflet map initialized");
+    console.log("✅ Leaflet map initialized");
+
+    // Plot route if parameters provided
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const fromLat = parseFloat(params.get('from_lat'));
+        const fromLng = parseFloat(params.get('from_lng'));
+        const toLat = parseFloat(params.get('to_lat'));
+        const toLng = parseFloat(params.get('to_lng'));
+        if (!isNaN(fromLat) && !isNaN(fromLng) && !isNaN(toLat) && !isNaN(toLng)) {
+            if (typeof addRouteToIncident === 'function') {
+                addRouteToIncident(fromLat, fromLng, toLat, toLng);
+                showNotification('Route loaded for dispatched unit', 'success');
+            }
+        }
+    } catch (e) {}
 }
 
 // ===============================
@@ -342,11 +295,11 @@ function getIcon(type) {
 }
 
 function addUnitMarker(id, lat, lng, label, type) {
-  const marker = L.marker([lat, lng], { icon: getIcon(type) })
-    .addTo(map)
-    .bindPopup(`<strong>${label}</strong><br>Status: Active`);
+    const marker = L.marker([lat, lng], { icon: getIcon(type) })
+        .addTo(map)
+        .bindPopup(`<strong>${label}</strong><br>Status: ${type === 'incident' ? 'Incident' : 'Active'}`);
 
-  markers[id] = { marker, type: "unit" };
+    markers[id] = { marker, type: "unit" };
 }
 
 function addIncidentMarker(id, lat, lng, label) {
@@ -519,15 +472,129 @@ document.addEventListener("DOMContentLoaded", () => {
         const params = new URLSearchParams(window.location.search);
         const unit = params.get('unit');
         if (unit) {
-            setTimeout(() => { try { trackUnit(unit); } catch (e) {} }, 500);
+            // Wait for units to load then focus
+            const attempt = () => { try { trackUnit(unit); } catch (e) {} };
+            setTimeout(attempt, 800);
         }
     } catch (e) {}
 });
 </script>
 
 
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<script src="js/routing.js"></script>
+<script>
+// Load dispatched units and render list + map markers
+function loadDispatchedUnits() {
+    fetch('api/units_list.php?status=dispatched')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const items = res.items || [];
+            renderUnitCards(items);
+            syncUnitMarkers(items);
+        })
+        .catch(() => {});
+}
+
+function renderUnitCards(items) {
+    const container = document.getElementById('unit-scroll-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!items.length) {
+        container.innerHTML = '<div class="unit-card"><div class="unit-header"><div><h4 class="unit-name">No dispatched units</h4><span class="unit-status">—</span></div></div></div>';
+        return;
+    }
+    const statusClass = s => (
+        s === 'enroute' ? 'enroute' : s === 'on_scene' ? 'emergency' : 'active'
+    );
+    items.forEach(u => {
+        const cls = statusClass(u.status || 'assigned');
+        const title = (u.incident_title || u.incident_type || 'Dispatched Incident');
+        const loc = (u.incident_location || 'Unknown location');
+        let distanceLine = '';
+        if (u.latitude && u.longitude && u.incident_latitude && u.incident_longitude) {
+            const dkm = haversine(parseFloat(u.latitude), parseFloat(u.longitude), parseFloat(u.incident_latitude), parseFloat(u.incident_longitude));
+            if (!isNaN(dkm)) distanceLine = `<div><i class=\"fas fa-ruler\"></i> Distance: ${dkm.toFixed(2)} km</div>`;
+        }
+        const card = document.createElement('div');
+        card.className = `unit-card ${cls}`;
+        card.setAttribute('data-unit', u.identifier);
+        card.innerHTML = `
+            <div class="unit-header">
+                <div>
+                    <h4 class="unit-name">${escapeHtml(u.identifier)}</h4>
+                    <span class="unit-status">${escapeHtml((u.status || '').replace('_',' '))}</span>
+                </div>
+            </div>
+            <div class="unit-details">
+                <div><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(title)}</div>
+                <div><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc)}</div>
+                ${distanceLine}
+            </div>
+            <div class="unit-actions">
+                <button class="btn-unit" onclick="trackUnit('${escapeAttr(u.identifier)}')"><i class="fas fa-location-arrow"></i> Track</button>
+                <button class="btn-unit" onclick="unitHistory('${escapeAttr(u.identifier)}')"><i class="fas fa-history"></i> History</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function syncUnitMarkers(items) {
+    items.forEach(u => {
+        const id = u.identifier;
+        const type = u.unit_type || 'other';
+        const lat = parseFloat(u.latitude);
+        const lng = parseFloat(u.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            // Include status in popup label
+            const label = `${id}`;
+            addUnitMarker(id, lat, lng, label, type);
+        }
+    });
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"] /g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',' ':' '})[c] || c);
+}
+function escapeAttr(s) {
+    return String(s || '').replace(/['"]/g, '_');
+}
+
+// Haversine distance in km
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function loadAvailableUnits() {
+    fetch('api/units_list.php?status=available')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const items = res.items || [];
+            // Only add markers; we keep the panel focused on dispatched units for now
+            items.forEach(u => {
+                const id = u.identifier;
+                const type = u.unit_type || 'other';
+                const lat = parseFloat(u.latitude);
+                const lng = parseFloat(u.longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    addUnitMarker(id, lat, lng, `${id}`, type);
+                }
+            });
+        })
+        .catch(() => {});
+}
 </script>
 
 

@@ -250,9 +250,31 @@ $pageTitle = 'Incident Priority Management';
             // Resolve button
             if (btn.querySelector('.fa-check')) {
                 if (confirm('Are you sure you want to resolve this incident?')) {
-                    incident.status = 'resolved';
-                    renderDynamicIncidents();
-                    showNotification('Incident marked as resolved', 'success');
+                    const incidentId = incident.id || null;
+                    const note = `Resolved via UI at ${new Date().toLocaleString()}`;
+                    if (incidentId) {
+                        fetch('api/incident_resolve.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ incident_id: incidentId, note })
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res && res.ok) {
+                                incident.status = 'resolved';
+                                renderDynamicIncidents();
+                                showNotification('Incident resolved. Units released to available.', 'success');
+                            } else {
+                                showNotification('Failed to resolve incident', 'error');
+                            }
+                        })
+                        .catch(() => showNotification('Network error', 'error'));
+                    } else {
+                        // Fallback: update UI only
+                        incident.status = 'resolved';
+                        renderDynamicIncidents();
+                        showNotification('Incident marked as resolved (local)', 'info');
+                    }
                 }
                 return;
             }

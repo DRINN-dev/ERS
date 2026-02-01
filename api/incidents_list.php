@@ -20,7 +20,8 @@ $day = isset($_GET['day']) ? trim((string)$_GET['day']) : ''; // YYYY-MM-DD
 $month = isset($_GET['month']) ? trim((string)$_GET['month']) : ''; // YYYY-MM
 
 $sql = 'SELECT i.id, i.reference_no, i.type, i.priority, i.status, i.location_address, i.description, i.created_at,
-        u.identifier AS unit_identifier, u.unit_type AS unit_type
+        u.identifier AS unit_identifier, u.unit_type AS unit_type,
+        c.caller_name AS caller_name, c.caller_phone AS caller_phone, i.title AS title
         FROM incidents i
         LEFT JOIN (
             SELECT d1.incident_id, d1.unit_id
@@ -31,7 +32,8 @@ $sql = 'SELECT i.id, i.reference_no, i.type, i.priority, i.status, i.location_ad
                 GROUP BY incident_id
             ) t ON t.incident_id = d1.incident_id AND t.max_assigned_at = d1.assigned_at
         ) ld ON ld.incident_id = i.id
-        LEFT JOIN units u ON u.id = ld.unit_id';
+        LEFT JOIN units u ON u.id = ld.unit_id
+        LEFT JOIN calls c ON c.id = i.reported_by_call_id';
 $where = [];
 $params = [];
 
@@ -43,7 +45,7 @@ if ($priority !== '') {
 if ($status !== '') {
     // Map status filter to DB values
     if ($status === 'active') {
-        $where[] = "(i.status = 'pending' OR i.status = 'active')";
+        $where[] = "(i.status = 'pending' OR i.status = 'dispatched')";
     } elseif ($status === 'dispatched') {
         $where[] = "i.status = 'dispatched'";
     } elseif ($status === 'resolved') {
@@ -85,8 +87,10 @@ try {
     // Transform to client structure
     $items = array_map(function ($r) {
         return [
+            'id' => $r['id'],
             'incident_code' => $r['reference_no'],
             'type' => $r['type'],
+            'title' => $r['title'],
             'location' => $r['location_address'],
             'description' => $r['description'],
             'priority' => $r['priority'],
@@ -94,6 +98,8 @@ try {
             'created_at' => $r['created_at'],
             'assigned_unit' => $r['unit_identifier'] ?? null,
             'assigned_unit_type' => $r['unit_type'] ?? null,
+            'caller_name' => $r['caller_name'] ?? null,
+            'caller_phone' => $r['caller_phone'] ?? null,
         ];
     }, $rows);
     echo json_encode(['ok' => true, 'items' => $items]);
