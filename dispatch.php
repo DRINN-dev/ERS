@@ -589,6 +589,20 @@ function initMap() {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors"
     }).addTo(map);
+
+    // Load and display Quezon City border from GeoJSON
+    fetch('quezon_city.geojson')
+        .then(res => res.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: {
+                    color: 'red',
+                    weight: 3,
+                    fill: false
+                }
+            }).addTo(map);
+        });
+
     // Pinpoint the three sample units added in the database
     addMarker("police-unit-1", 14.6500, 121.0300, "🚓 Police Unit 1 - Station 1", "police");
     addMarker("fire-truck-1", 14.6700, 121.0450, "🚒 Fire Truck 1 - Station 2", "fire");

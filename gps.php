@@ -242,11 +242,24 @@ function initMap() {
     attribution: "© OpenStreetMap contributors"
   }).addTo(map);
 
+    // Load and display Quezon City border from GeoJSON
+    fetch('quezon_city.geojson')
+        .then(res => res.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: {
+                    color: 'red',
+                    weight: 3,
+                    fill: false
+                }
+            }).addTo(map);
+        });
+
     // Load units from API and render
     loadDispatchedUnits();
     loadAvailableUnits();
 
-  initRoutes();
+    initRoutes();
 
     // Sample incidents so the Incidents button is meaningful
     addIncidentMarker('incident-1', 14.6700, 121.0300, 'Cardiac Emergency');
@@ -389,14 +402,12 @@ function centerMap() {
 }
 
 function refreshMap() {
-  Object.values(markers).forEach(item => {
-    if (item.type === "unit") {
-      const pos = item.marker.getLatLng();
-      const newLat = pos.lat + (Math.random() - 0.5) * 0.001;
-      const newLng = pos.lng + (Math.random() - 0.5) * 0.001;
-      item.marker.setLatLng([newLat, newLng]);
-    }
-  });
+    Object.values(markers).forEach(item => {
+        const pos = item.marker.getLatLng();
+        const newLat = pos.lat + (Math.random() - 0.5) * 0.001;
+        const newLng = pos.lng + (Math.random() - 0.5) * 0.001;
+        item.marker.setLatLng([newLat, newLng]);
+    });
 }
 
 function selectRoute(routeId) {
@@ -418,6 +429,7 @@ function trackUnit(unitId) {
     showNotification(`Tracking ${unitId.toUpperCase()}`, 'success');
 }
 
+    // Quezon City bounds
 function unitHistory(unitId) {
     alert(
         `History for ${unitId.toUpperCase()}:\n\n` +
