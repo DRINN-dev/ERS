@@ -1,6 +1,3 @@
--- =====================
--- Users Table for Authentication
--- =====================
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(150) NOT NULL,
@@ -8,14 +5,16 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` VARCHAR(150) NOT NULL,
   `role` ENUM('admin','operator','viewer') NOT NULL DEFAULT 'viewer',
   `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
-  `last_login` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `last_login` TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_users_email` (`email`),
   KEY `idx_users_status` (`status`),
   KEY `idx_users_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 
 -- Insert default admin account
 -- Email: admin@example.com

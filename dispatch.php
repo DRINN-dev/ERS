@@ -168,7 +168,6 @@ try {
                             Available Units
                         </h2>
                         <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
-                        <button class="btn-action-small" style="margin-left:8px" onclick="resetLastUnits()"><i class="fas fa-undo"></i> Reset 2</button>
                     </div>
 
                     <div id="available-units-container" style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
