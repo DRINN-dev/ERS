@@ -24,64 +24,88 @@
     
     <div class="sidebar-content">
         <!-- Navigation Menu -->
-        <nav class="sidebar-nav">
-            <!-- Admin Section -->
+        <nav class="sidebar-nav" role="navigation" aria-label="Primary">
+            <!-- Overview -->
             <div class="sidebar-section">
+                <div class="sidebar-section-title">Overview</div>
                 <ul class="sidebar-menu">
                     <li class="sidebar-menu-item">
-                        <a href="index.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+                        <a href="index.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-gauge"></i>
                             <span>Dashboard</span>
                         </a>
                     </li>
+                </ul>
+            </div>
+
+            <!-- Operations -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Operations</div>
+                <ul class="sidebar-menu">
                     <li class="sidebar-menu-item">
-                        <a href="call.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'call.php' ? 'active' : ''; ?>">
+                        <a href="call.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'call.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'call.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-phone"></i>
-                            <span>Call Receiving & Incident Logs</span>
+                            <span>Call Receiving & Logs</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="incident.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'incident.php' ? 'active' : ''; ?>">
+                        <a href="incident.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'incident.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'incident.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-crutch"></i>
-                            <span>Incident Priority Management</span>
+                            <span>Incident Priority</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="dispatch.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'dispatch.php' ? 'active' : ''; ?>">
+                        <a href="dispatch.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'dispatch.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'dispatch.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-bell"></i>
                             <span>Dispatch Center</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="gps.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'gps.php' ? 'active' : ''; ?>">
+                        <a href="gps.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'gps.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'gps.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-map"></i>
-                            <span>GPS tracking</span>
+                            <span>GPS Tracking</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="resources.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'resources.php' ? 'active' : ''; ?>">
+                        <a href="resources.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'resources.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'resources.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-truck-medical"></i>
                             <span>Resources Status</span>
                         </a>
                     </li>
+                </ul>
+            </div>
+
+            <!-- Collaboration -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Collaboration</div>
+                <ul class="sidebar-menu">
                     <li class="sidebar-menu-item">
-                        <a href="interagency.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'interagency.php' ? 'active' : ''; ?>">
+                        <a href="interagency.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'interagency.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'interagency.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-envelope"></i>
                             <span>Inter-Agency</span>
                         </a>
                     </li>
+                </ul>
+            </div>
+
+            <!-- Insights -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Insights</div>
+                <ul class="sidebar-menu">
                     <li class="sidebar-menu-item">
-                        <a href="report.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'report.php' ? 'active' : ''; ?>">
+                        <a href="report.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'report.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'report.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-chart-area"></i>
                             <span>Report Analytics</span>
                         </a>
                     </li>
-                     <li class="sidebar-menu-item">
-                        <a href="review.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'review.php' ? 'active' : ''; ?>">
+                    <li class="sidebar-menu-item">
+                        <a href="review.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'review.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'review.php' ? 'page' : 'false'; ?>">
                             <i class="fa-solid fa-comment"></i>
                             <span>Review & Feedback</span>
                         </a>
                     </li>
+                </ul>
+            </div>
         </nav>
     </div>
 </aside>
