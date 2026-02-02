@@ -167,7 +167,9 @@ try {
                             <i class="fas fa-ambulance"></i>
                             Available Units
                         </h2>
-                        <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <span id="available-units-count" style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><?php echo $availableUnits; ?> Available</span>
+                        </div>
                     </div>
 
                     <div id="available-units-container" style="height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;">
@@ -199,7 +201,29 @@ try {
                             echo '</div>';
                         }
                     } else {
-                        echo '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
+                        // Show sample units when none exist in DB
+                        $sampleUnits = [
+                            ['identifier' => 'Police Mobile', 'unit_type' => 'police', 'location' => 'City Hall'],
+                            ['identifier' => 'Fire Truck', 'unit_type' => 'Fire', 'location' => 'Circle K Station'],
+                            ['identifier' => 'Ambulance', 'unit_type' => 'ambulance', 'location' => 'Sm Fairview'],
+                        ];
+                        foreach ($sampleUnits as $u) {
+                            echo '<div class="unit-card available">';
+                            echo '  <div class="unit-info">';
+                            echo '    <div class="unit-details">';
+                            echo '      <div class="unit-name">' . htmlspecialchars($u['identifier']) . '</div>';
+                            echo '      <div class="unit-meta">';
+                            echo '        <span><i class="fas fa-map-marker-alt"></i> ' . htmlspecialchars(ucfirst($u['unit_type'])) . '</span>';
+                            echo '        <span>' . htmlspecialchars($u['location']) . '</span>';
+                            echo '      </div>';
+                            echo '    </div>';
+                            echo '  </div>';
+                            echo '  <div class="unit-actions">';
+                            // Deploy is not available for sample-only placeholders; keep Track button
+                            echo '    <button class="btn-action-small" onclick="unitLocation(this)" data-identifier="' . htmlspecialchars($u['identifier']) . '"><i class="fas fa-location-arrow"></i> Track</button>';
+                            echo '  </div>';
+                            echo '</div>';
+                        }
                     }
                     ?>
                     </div>
@@ -329,6 +353,16 @@ try {
                         data.units.forEach(u => {
                             select.innerHTML += `<option value="${u.id}" data-type="${u.unit_type}" data-identifier="${u.identifier}">${u.identifier} (${u.unit_type})</option>`;
                         });
+                    } else {
+                        // If no real units, show sample units in dropdown
+                        const samples = [
+                            {id: 'sample-police', unit_type: 'police', identifier: 'police-unit-1'},
+                            {id: 'sample-fire', unit_type: 'fire', identifier: 'fire-truck-1'},
+                            {id: 'sample-ambulance', unit_type: 'ambulance', identifier: 'ambulance-1'}
+                        ];
+                        samples.forEach(u => {
+                            select.innerHTML += `<option value="${u.id}" data-type="${u.unit_type}" data-identifier="${u.identifier}">${u.identifier} (${u.unit_type})</option>`;
+                        });
                     }
                     document.getElementById('unit-details').innerHTML = '';
                 });
@@ -346,25 +380,51 @@ try {
                     document.getElementById('unit-details').innerHTML = '';
                     return;
                 }
-                fetch('api/unit_details.php?id=' + encodeURIComponent(unitId))
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.unit) {
-                            const u = data.unit;
-                            let html =
-                                `<strong>Driver:</strong> ${u.driver_name || 'N/A'}<br>` +
-                                `<strong>Plate #:</strong> ${u.plate_number || 'N/A'}<br>` +
-                                `<strong>Type:</strong> ${u.unit_type || ''}<br>` +
-                                `<strong>Status:</strong> ${u.status || ''}`;
-                            if (currentIncidentLat && currentIncidentLng && u.latitude && u.longitude) {
-                                const distKm = haversine(Number(u.latitude), Number(u.longitude), currentIncidentLat, currentIncidentLng).toFixed(2);
-                                html += `<br><strong>Distance to Incident:</strong> ${distKm} km`;
-                            }
-                            document.getElementById('unit-details').innerHTML = html;
-                        } else {
-                            document.getElementById('unit-details').innerHTML = '<span style="color:red">Unit not found.</span>';
+                // If sample unit, show static details
+                if (unitId.startsWith('sample-')) {
+                    let details = {
+                        'sample-police': {
+                            driver: 'Officer Cruz', plate: 'PN-1281', type: 'police', status: 'available', lat: 14.6500, lng: 121.0300
+                        },
+                        'sample-fire': {
+                            driver: 'FF Santos', plate: 'FT-3482', type: 'fire', status: 'available', lat: 14.6700, lng: 121.0450
+                        },
+                        'sample-ambulance': {
+                            driver: 'EMT Dela Cruz', plate: 'AB-5523', type: 'ambulance', status: 'available', lat: 14.6900, lng: 121.0600
                         }
-                    });
+                    };
+                    const u = details[unitId];
+                    let html =
+                        `<strong>Driver:</strong> ${u.driver}<br>` +
+                        `<strong>Plate #:</strong> ${u.plate}<br>` +
+                        `<strong>Type:</strong> ${u.type}<br>` +
+                        `<strong>Status:</strong> ${u.status}`;
+                    if (currentIncidentLat && currentIncidentLng && u.lat && u.lng) {
+                        const distKm = haversine(Number(u.lat), Number(u.lng), currentIncidentLat, currentIncidentLng).toFixed(2);
+                        html += `<br><strong>Distance to Incident:</strong> ${distKm} km`;
+                    }
+                    document.getElementById('unit-details').innerHTML = html;
+                } else {
+                    fetch('api/unit_details.php?id=' + encodeURIComponent(unitId))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.unit) {
+                                const u = data.unit;
+                                let html =
+                                    `<strong>Driver:</strong> ${u.driver_name || 'N/A'}<br>` +
+                                    `<strong>Plate #:</strong> ${u.plate_number || 'N/A'}<br>` +
+                                    `<strong>Type:</strong> ${u.unit_type || ''}<br>` +
+                                    `<strong>Status:</strong> ${u.status || ''}`;
+                                if (currentIncidentLat && currentIncidentLng && u.latitude && u.longitude) {
+                                    const distKm = haversine(Number(u.latitude), Number(u.longitude), currentIncidentLat, currentIncidentLng).toFixed(2);
+                                    html += `<br><strong>Distance to Incident:</strong> ${distKm} km`;
+                                }
+                                document.getElementById('unit-details').innerHTML = html;
+                            } else {
+                                document.getElementById('unit-details').innerHTML = '<span style="color:red">Unit not found.</span>';
+                            }
+                        });
+                }
             });
             function haversine(lat1, lon1, lat2, lon2) {
                 const R = 6371; // km
@@ -378,74 +438,109 @@ try {
                 return R * c;
             }
                         document.getElementById('confirm-dispatch-btn').onclick = function() {
-                                const unitSelect = document.getElementById('unit-select');
-                                const unitId = unitSelect.value;
-                                const selectedOption = unitSelect.options[unitSelect.selectedIndex];
-                                const unitIdentifier = selectedOption ? selectedOption.getAttribute('data-identifier') : '';
-                                if (!unitId || !currentIncidentId) {
-                                        alert('Please select a unit.');
-                                        return;
-                                }
-                                // Fetch incident & unit details to compute routing and pass to GPS
-                                Promise.all([
-                                    fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId)).then(r => r.json()),
-                                    fetch('api/unit_details.php?id=' + encodeURIComponent(unitId)).then(r => r.json())
-                                ]).then(([incRes, unitRes]) => {
-                                    const inc = incRes.incident || {};
-                                    const u = unitRes.unit || {};
-                                    let toLat = null, toLng = null;
-                                    if (inc.latitude && inc.longitude) {
-                                        toLat = Number(inc.latitude);
-                                        toLng = Number(inc.longitude);
-                                    } else if (inc.location_address && inc.location_address.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
-                                        const parts = inc.location_address.split(',').map(Number);
-                                        toLat = parts[0];
-                                        toLng = parts[1];
-                                    }
-                                    let fromLat = null, fromLng = null;
-                                    if (u.latitude && u.longitude) {
-                                        fromLat = Number(u.latitude);
-                                        fromLng = Number(u.longitude);
-                                    } else {
-                                        // Fallback and persist station coordinates based on unit type
-                                        const type = selectedOption ? selectedOption.getAttribute('data-type') : (u.unit_type || 'other');
-                                        if (type === 'police') { fromLat = 14.6500; fromLng = 121.0300; }
-                                        else if (type === 'fire') { fromLat = 14.6700; fromLng = 121.0450; }
-                                        else if (type === 'ambulance') { fromLat = 14.6900; fromLng = 121.0600; }
-                                        else { fromLat = 14.6760; fromLng = 121.0437; }
-                                        return fetch('api/unit_location_update.php', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ unit_id: unitId, latitude: fromLat, longitude: fromLng })
-                                        }).then(() => ({ inc, u, toLat, toLng, fromLat, fromLng }));
-                                    }
-                                    // Plot locally if possible
-                                    if (typeof addRouteToIncident === 'function' && fromLat && fromLng && toLat && toLng) {
-                                        addRouteToIncident(fromLat, fromLng, toLat, toLng);
-                                    }
-                                    // Continue with dispatch
-                                    return fetch('api/dispatch_unit.php', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ incident_id: currentIncidentId, unit_id: unitId })
-                                    }).then(r => r.json()).then(data => ({ data, fromLat, fromLng, toLat, toLng }));
-                                }).then(({ data, fromLat, fromLng, toLat, toLng }) => {
-                                    if (data.ok) {
-                                        // Redirect to GPS with routing params
-                                        const qp = new URLSearchParams();
-                                        qp.set('unit_id', unitId);
-                                        if (unitIdentifier) qp.set('unit', unitIdentifier);
-                                        if (fromLat && fromLng && toLat && toLng) {
-                                            qp.set('from_lat', String(fromLat));
-                                            qp.set('from_lng', String(fromLng));
+                            const unitSelect = document.getElementById('unit-select');
+                            const unitId = unitSelect.value;
+                            const selectedOption = unitSelect.options[unitSelect.selectedIndex];
+                            const unitIdentifier = selectedOption ? selectedOption.getAttribute('data-identifier') : '';
+                            if (!unitId || !currentIncidentId) {
+                                alert('Please select a unit.');
+                                return;
+                            }
+                            // If sample unit, just redirect to GPS with static coordinates
+                            if (unitId.startsWith('sample-')) {
+                                let coords = {
+                                    'sample-police': {lat: 14.6500, lng: 121.0300},
+                                    'sample-fire': {lat: 14.6700, lng: 121.0450},
+                                    'sample-ambulance': {lat: 14.6900, lng: 121.0600}
+                                };
+                                const u = coords[unitId];
+                                const qp = new URLSearchParams();
+                                qp.set('unit_id', unitId);
+                                if (unitIdentifier) qp.set('unit', unitIdentifier);
+                                qp.set('from_lat', String(u.lat));
+                                qp.set('from_lng', String(u.lng));
+                                // Try to get incident location for routing
+                                fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId))
+                                    .then(r => r.json())
+                                    .then(incRes => {
+                                        let toLat = null, toLng = null;
+                                        const inc = incRes.incident || {};
+                                        if (inc.latitude && inc.longitude) {
+                                            toLat = Number(inc.latitude);
+                                            toLng = Number(inc.longitude);
+                                        } else if (inc.location_address && inc.location_address.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                                            const parts = inc.location_address.split(',').map(Number);
+                                            toLat = parts[0];
+                                            toLng = parts[1];
+                                        }
+                                        if (toLat && toLng) {
                                             qp.set('to_lat', String(toLat));
                                             qp.set('to_lng', String(toLng));
                                         }
                                         window.location.href = 'gps.php?' + qp.toString();
-                                    } else {
-                                        alert('Failed to dispatch unit: ' + (data.error || 'Unknown error'));
+                                    });
+                                return;
+                            }
+                            // Real unit: do original dispatch logic
+                            Promise.all([
+                                fetch('api/incident_details.php?id=' + encodeURIComponent(currentIncidentId)).then(r => r.json()),
+                                fetch('api/unit_details.php?id=' + encodeURIComponent(unitId)).then(r => r.json())
+                            ]).then(([incRes, unitRes]) => {
+                                const inc = incRes.incident || {};
+                                const u = unitRes.unit || {};
+                                let toLat = null, toLng = null;
+                                if (inc.latitude && inc.longitude) {
+                                    toLat = Number(inc.latitude);
+                                    toLng = Number(inc.longitude);
+                                } else if (inc.location_address && inc.location_address.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
+                                    const parts = inc.location_address.split(',').map(Number);
+                                    toLat = parts[0];
+                                    toLng = parts[1];
+                                }
+                                let fromLat = null, fromLng = null;
+                                if (u.latitude && u.longitude) {
+                                    fromLat = Number(u.latitude);
+                                    fromLng = Number(u.longitude);
+                                } else {
+                                    // Fallback and persist station coordinates based on unit type
+                                    const type = selectedOption ? selectedOption.getAttribute('data-type') : (u.unit_type || 'other');
+                                    if (type === 'police') { fromLat = 14.6500; fromLng = 121.0300; }
+                                    else if (type === 'fire') { fromLat = 14.6700; fromLng = 121.0450; }
+                                    else if (type === 'ambulance') { fromLat = 14.6900; fromLng = 121.0600; }
+                                    else { fromLat = 14.6760; fromLng = 121.0437; }
+                                    return fetch('api/unit_location_update.php', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ unit_id: unitId, latitude: fromLat, longitude: fromLng })
+                                    }).then(() => ({ inc, u, toLat, toLng, fromLat, fromLng }));
+                                }
+                                // Plot locally if possible
+                                if (typeof addRouteToIncident === 'function' && fromLat && fromLng && toLat && toLng) {
+                                    addRouteToIncident(fromLat, fromLng, toLat, toLng);
+                                }
+                                // Continue with dispatch
+                                return fetch('api/dispatch_unit.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ incident_id: currentIncidentId, unit_id: unitId })
+                                }).then(r => r.json()).then(data => ({ data, fromLat, fromLng, toLat, toLng }));
+                            }).then(({ data, fromLat, fromLng, toLat, toLng }) => {
+                                if (data.ok) {
+                                    // Redirect to GPS with routing params
+                                    const qp = new URLSearchParams();
+                                    qp.set('unit_id', unitId);
+                                    if (unitIdentifier) qp.set('unit', unitIdentifier);
+                                    if (fromLat && fromLng && toLat && toLng) {
+                                        qp.set('from_lat', String(fromLat));
+                                        qp.set('from_lng', String(fromLng));
+                                        qp.set('to_lat', String(toLat));
+                                        qp.set('to_lng', String(toLng));
                                     }
-                                }).catch(() => alert('Network error.'));
+                                    window.location.href = 'gps.php?' + qp.toString();
+                                } else {
+                                    alert('Failed to dispatch unit: ' + (data.error || 'Unknown error'));
+                                }
+                            }).catch(() => alert('Network error.'));
                         };
         });
         </script>
@@ -596,14 +691,63 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('available-units-container');
         if (!container) return;
         const hasCards = container.querySelector('.unit-card');
-        if (hasCards) return; // already rendered from PHP
+        if (hasCards) {
+            const badge = document.querySelector('#available-units-count');
+            const count = container.querySelectorAll('.unit-card.available').length;
+            if (badge && count > 0) badge.textContent = String(count) + ' Available';
+            return; // already rendered from PHP
+        }
         fetch('api/units_list.php?status=available')
             .then(r => r.json())
             .then(res => {
                 if (!res.ok) return;
                 const items = res.items || [];
                 if (!items.length) {
-                    container.innerHTML = '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
+                    const badge = document.querySelector('#available-units-count');
+                    if (badge) badge.textContent = '3 Available';
+                    container.innerHTML = `
+                        <div class="unit-card available">
+                            <div class="unit-info">
+                                <div class="unit-details">
+                                    <div class="unit-name">police-unit-1</div>
+                                    <div class="unit-meta">
+                                        <span><i class="fas fa-map-marker-alt"></i> Police</span>
+                                        <span>Station 1</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="unit-actions">
+                                <button class="btn-action-small" onclick="unitLocation(this)" data-identifier="police-unit-1"><i class="fas fa-location-arrow"></i> Track</button>
+                            </div>
+                        </div>
+                        <div class="unit-card available">
+                            <div class="unit-info">
+                                <div class="unit-details">
+                                    <div class="unit-name">fire-truck-1</div>
+                                    <div class="unit-meta">
+                                        <span><i class="fas fa-map-marker-alt"></i> Fire</span>
+                                        <span>Station 2</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="unit-actions">
+                                <button class="btn-action-small" onclick="unitLocation(this)" data-identifier="fire-truck-1"><i class="fas fa-location-arrow"></i> Track</button>
+                            </div>
+                        </div>
+                        <div class="unit-card available">
+                            <div class="unit-info">
+                                <div class="unit-details">
+                                    <div class="unit-name">ambulance-1</div>
+                                    <div class="unit-meta">
+                                        <span><i class="fas fa-map-marker-alt"></i> Ambulance</span>
+                                        <span>Station 3</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="unit-actions">
+                                <button class="btn-action-small" onclick="unitLocation(this)" data-identifier="ambulance-1"><i class="fas fa-location-arrow"></i> Track</button>
+                            </div>
+                        </div>`;
                     return;
                 }
                 container.innerHTML = '';
@@ -1050,42 +1194,8 @@ function refreshActiveCalls() {
       }).catch(() => {});
 }
 
-function refreshAvailableUnits() {
-    const container = document.getElementById('available-units-container');
-    if (!container) return;
-    fetch('api/units_list.php?status=available')
-      .then(r => r.json())
-      .then(res => {
-        if (!res.ok) return;
-        const items = res.items || [];
-        if (!items.length) {
-            container.innerHTML = '<div class="unit-card"><div class="unit-info"><div class="unit-details"><div class="unit-name">No available units.</div></div></div></div>';
-            return;
-        }
-        container.innerHTML = '';
-        items.forEach(u => {
-            const meta = [];
-            if (u.unit_type) meta.push(u.unit_type.charAt(0).toUpperCase() + u.unit_type.slice(1));
-            const card = document.createElement('div');
-            card.className = 'unit-card available';
-            card.innerHTML = `
-                <div class=\"unit-info\">
-                    <div class=\"unit-details\">
-                        <div class=\"unit-name\">${escapeHtml(u.identifier)}</div>
-                        <div class=\"unit-meta\">
-                            <span><i class=\"fas fa-map-marker-alt\"></i> ${escapeHtml(u.unit_type || '')}</span>
-                            ${meta.length ? '<span>' + meta.join(' | ') + '</span>' : ''}
-                        </div>
-                    </div>
-                </div>
-                <div class=\"unit-actions\">
-                    <button class=\"btn-action-small\" onclick=\"unitStatus(${u.id}, 'assigned')\"><i class=\"fas fa-play\"></i> Deploy</button>
-                    <button class=\"btn-action-small\" onclick=\"unitLocation(this)\" data-unit-id=\"${u.id}\" data-identifier=\"${escapeAttr(u.identifier)}\"><i class=\"fas fa-location-arrow\"></i> Track</button>
-                </div>`;
-            container.appendChild(card);
-        });
-      }).catch(() => {});
-}
+// refreshAvailableUnits removed (no longer needed)
+
 
 function resetLastUnits() {
     fetch('api/reset_units.php', { method: 'POST' })
