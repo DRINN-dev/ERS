@@ -55,9 +55,110 @@ try {
        =================================== -->
     <div class="main-content">
         <div class="main-container">
-
-
             <div style="height: 3.5rem;"></div>
+                        </div>
+
+                        <!-- Resource Requests Table (moved below All Resources) -->
+                        <div class="resource-requests-table-section" style="margin-top:2rem;">
+                            <h2 style="font-size: 1.2rem; font-weight: 700; color: #333; margin-bottom: 1rem; display: flex; align-items: center;">
+                                <i class="fas fa-clipboard-list" style="margin-right: 0.5rem; color: #007bff;"></i>
+                                Request
+                            </h2>
+                            <div style="overflow-x:auto;">
+                            <style>
+                            .request-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 1.08rem;
+                            }
+                            .request-table th, .request-table td {
+                                padding: 0.75em 1em;
+                                border: 1px solid #e0e0e0;
+                                text-align: left;
+                            }
+                            .request-table th {
+                                background: #f7f7f7;
+                                font-size: 1.13rem;
+                            }
+                            .request-status-pending {
+                                background: #fff3cd;
+                                color: #856404;
+                                font-weight: 600;
+                                border-radius: 16px;
+                                padding: 0.3em 1em;
+                                font-size: 0.98em;
+                                display: inline-block;
+                            }
+                            .request-status-approved {
+                                background: #d4edda;
+                                color: #218838;
+                                font-weight: 600;
+                                border-radius: 16px;
+                                padding: 0.3em 1em;
+                                font-size: 0.98em;
+                                display: inline-block;
+                            }
+                            .request-status-rejected {
+                                background: #f8d7da;
+                                color: #721c24;
+                                font-weight: 600;
+                                border-radius: 16px;
+                                padding: 0.3em 1em;
+                                font-size: 0.98em;
+                                display: inline-block;
+                            }
+                            </style>
+                            <table class="request-table">
+                                <thead>
+                                    <tr>
+                                        <th>Requestor</th>
+                                        <th>Resource Name</th>
+                                        <th>Type</th>
+                                        <th>Quantity</th>
+                                        <th>Priority</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Date Requested</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    // Fetch resource requests from DB
+                                    try {
+                                        if ($pdo) {
+                                            $stmt = $pdo->query("SELECT * FROM resource_requests ORDER BY date_requested DESC LIMIT 50");
+                                            while ($row = $stmt->fetch()) {
+                                                $details = json_decode($row['details'], true);
+                                                $type = $details['type'] ?? '';
+                                                $quantity = $details['quantity'] ?? '';
+                                                $priority = $details['priority'] ?? '';
+                                                $location = $details['location'] ?? '';
+                                                $notes = $details['notes'] ?? '';
+                                                $statusClass = 'request-status-' . strtolower($row['status']);
+                                                echo '<tr>';
+                                                echo '<td>' . htmlspecialchars($row['requestor']) . '</td>';
+                                                echo '<td>' . htmlspecialchars($row['resource_name']) . '</td>';
+                                                echo '<td>' . htmlspecialchars(ucfirst($type)) . '</td>';
+                                                echo '<td>' . htmlspecialchars($quantity) . '</td>';
+                                                echo '<td>' . htmlspecialchars(ucfirst($priority)) . '</td>';
+                                                echo '<td>' . htmlspecialchars($location) . '</td>';
+                                                echo '<td><span class="' . $statusClass . '">' . htmlspecialchars(ucfirst($row['status'])) . '</span></td>';
+                                                echo '<td>' . htmlspecialchars($row['date_requested']) . '</td>';
+                                                echo '<td>' . htmlspecialchars($notes) . '</td>';
+                                                echo '</tr>';
+                                            }
+                                        } else {
+                                            echo '<tr><td colspan="9" style="text-align:center;color:#888;">Unable to connect to database.</td></tr>';
+                                        }
+                                    } catch (Throwable $e) {
+                                        echo '<tr><td colspan="9" style="text-align:center;color:#888;">Error loading requests.</td></tr>';
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
             <!-- Resource Overview -->
             <div class="resource-overview">
                 <div class="overview-card">

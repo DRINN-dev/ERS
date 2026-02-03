@@ -1,0 +1,12 @@
+/* Keep Review page positioned like other modules */
+.main-content {
+	margin-left: var(--sidebar-width-1);
+	padding: 20px;
+}
+
+@media (max-width: 767px) {
+	.main-content {
+		margin-left: 0;
+		padding: 15px;
+	}
+}

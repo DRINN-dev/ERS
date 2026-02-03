@@ -298,9 +298,18 @@
 
         .sidebar-header {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            margin-bottom: 20px;
+            /* margin-bottom removed */
+        }
+
+        .sidebar-header .logo-img {
+            display: block;
+            margin: 0 auto;
+            width: 105px;
+            height: 60px;
+            object-fit: contain;
         }
 
         .sidebar-header h3 {
