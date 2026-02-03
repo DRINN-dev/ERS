@@ -195,32 +195,8 @@ try {
                             echo '    </div>';
                             echo '  </div>';
                             echo '  <div class="unit-actions">';
-                            echo '    <button class="btn-action-small" onclick="deployUnitToIncident(' . (int)$unit['id'] . ')"><i class="fas fa-play"></i> Deploy</button>';
+                            // Removed Deploy button
                             echo '    <button class="btn-action-small" onclick="unitLocation(this)" data-unit-id="' . (int)$unit['id'] . '" data-identifier="' . htmlspecialchars($unit['identifier']) . '"><i class="fas fa-location-arrow"></i> Track</button>';
-                            echo '  </div>';
-                            echo '</div>';
-                        }
-                    } else {
-                        // Show sample units when none exist in DB
-                        $sampleUnits = [
-                            ['identifier' => 'Police Mobile', 'unit_type' => 'police', 'location' => 'City Hall'],
-                            ['identifier' => 'Fire Truck', 'unit_type' => 'Fire', 'location' => 'Circle K Station'],
-                            ['identifier' => 'Ambulance', 'unit_type' => 'ambulance', 'location' => 'Sm Fairview'],
-                        ];
-                        foreach ($sampleUnits as $u) {
-                            echo '<div class="unit-card available">';
-                            echo '  <div class="unit-info">';
-                            echo '    <div class="unit-details">';
-                            echo '      <div class="unit-name">' . htmlspecialchars($u['identifier']) . '</div>';
-                            echo '      <div class="unit-meta">';
-                            echo '        <span><i class="fas fa-map-marker-alt"></i> ' . htmlspecialchars(ucfirst($u['unit_type'])) . '</span>';
-                            echo '        <span>' . htmlspecialchars($u['location']) . '</span>';
-                            echo '      </div>';
-                            echo '    </div>';
-                            echo '  </div>';
-                            echo '  <div class="unit-actions">';
-                            // Deploy is not available for sample-only placeholders; keep Track button
-                            echo '    <button class="btn-action-small" onclick="unitLocation(this)" data-identifier="' . htmlspecialchars($u['identifier']) . '"><i class="fas fa-location-arrow"></i> Track</button>';
                             echo '  </div>';
                             echo '</div>';
                         }
@@ -603,17 +579,28 @@ function initMap() {
             }).addTo(map);
         });
 
-    // Pinpoint the three sample units added in the database
-    addMarker("police-unit-1", 14.6500, 121.0300, "🚓 Police Unit 1 - Station 1", "police");
-    addMarker("fire-truck-1", 14.6700, 121.0450, "🚒 Fire Truck 1 - Station 2", "fire");
-    addMarker("ambulance-1", 14.6900, 121.0600, "🚑 Ambulance 1 - Station 3", "ambulance");
+    // Load real available units as markers
+    fetch('api/units_list.php?status=available')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const items = res.items || [];
+            items.forEach(u => {
+                const id = u.identifier;
+                const type = u.unit_type || 'other';
+                const lat = parseFloat(u.latitude);
+                const lng = parseFloat(u.longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    addMarker(id, lat, lng, `${id} (${type})`, type);
+                }
+            });
+        });
     // Load active incidents as markers
     fetch('api/incidents_list.php?status=active')
         .then(r => r.json())
         .then(data => {
             if (data.ok && data.items) {
                 data.items.forEach(inc => {
-                    // If incident has coordinates, use them; else skip (or geocode if you want)
                     if (inc.location && inc.location.match(/\d+\.\d+,[ ]*\d+\.\d+/)) {
                         const [lat, lng] = inc.location.split(',').map(Number);
                         addIncidentMarker(inc.incident_code, lat, lng, inc.type + ' - ' + (inc.description || ''));
@@ -646,17 +633,18 @@ function getIncidentIcon() {
 // ICONS
 // ===============================
 function getIcon(type) {
-  const icons = {
-    ambulance: "https://cdn-icons-png.flaticon.com/512/2967/2967350.png",
-    police: "https://cdn-icons-png.flaticon.com/512/2991/2991120.png",
-    fire: "https://cdn-icons-png.flaticon.com/512/482/482244.png"
-  };
+    const icons = {
+        ambulance: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+        police: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        fire: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        incident: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+    };
 
-  return L.icon({
-    iconUrl: icons[type],
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
-  });
+    return L.icon({
+        iconUrl: icons[type] || icons.incident,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
 }
 
 // ===============================

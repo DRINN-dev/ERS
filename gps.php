@@ -615,12 +615,9 @@ function loadAvailableUnits() {
         .then(res => {
             if (!res.ok) return;
             const items = res.items || [];
-            // Only add markers; we keep the panel focused on dispatched units for now
+            // Only add markers for real available units from the database
             if (!items.length) {
-                // Fallback sample markers so Track works without DB entries
-                addUnitMarker('police-unit-1', 14.6500, 121.0300, 'police-unit-1', 'police');
-                addUnitMarker('fire-truck-1', 14.6700, 121.0450, 'fire-truck-1', 'fire');
-                addUnitMarker('ambulance-1', 14.6900, 121.0600, 'ambulance-1', 'ambulance');
+                // No fallback sample markers
                 return;
             }
             items.forEach(u => {
