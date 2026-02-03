@@ -64,7 +64,7 @@ $pageTitle = 'GPS Tracking System';
                     </div>
                     <div class="control-group">
                         <label for="search-location">Search Location</label>
-                        <input type="text" id="search-location" placeholder="Enter address or coordinates">
+                        <input type="text" id="search-location" placeholder="Enter address or coordinates" autocomplete="off" style="position:relative;z-index:1100;">
                     </div>
                 </div>
             </div>
@@ -496,6 +496,27 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script src="js/routing.js"></script>
+<script src="js/place-autocomplete.js"></script>
+<script>
+// Ensure place autocomplete is initialized for search-location
+if (window.attachPlaceAutocomplete) {
+    attachPlaceAutocomplete('search-location', function(place) {
+        if (window.map && place && place.lat && place.lon) {
+            window.map.setView([parseFloat(place.lat), parseFloat(place.lon)], 16, { animate: true });
+        }
+    });
+} else {
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.attachPlaceAutocomplete) {
+            attachPlaceAutocomplete('search-location', function(place) {
+                if (window.map && place && place.lat && place.lon) {
+                    window.map.setView([parseFloat(place.lat), parseFloat(place.lon)], 16, { animate: true });
+                }
+            });
+        }
+    });
+}
+</script>
 <script>
 // Load dispatched units and render list + map markers
 function loadDispatchedUnits() {
@@ -618,4 +639,24 @@ function loadAvailableUnits() {
 
 
 </body>
+<style>
+/* Style for autocomplete dropdown */
+.autocomplete-dropdown {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    z-index: 2000;
+    width: 100%;
+    max-height: 180px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.autocomplete-dropdown div {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.autocomplete-dropdown div:hover {
+    background: #f0f0f0;
+}
+</style>
 </html>

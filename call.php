@@ -18,6 +18,7 @@ $pageTitle = 'Emergency Call Center';
     <link rel="stylesheet" href="css/sidebar-footer.css">
     <link rel="stylesheet" href="CSS/cards.css">
     <link rel="stylesheet" href="CSS/call.css">
+    <script src="js/place-autocomplete.js"></script>
 </head>
 <body>
     <!-- Include Sidebar Component -->
@@ -31,26 +32,46 @@ $pageTitle = 'Emergency Call Center';
        =================================== -->
     <div class="main-content">
         <div class="main-container">
-            <div style="height: 3.5rem;"></div>
+            <div style="height: 1rem;"></div>
 
             <!-- Stats Bar -->
             <div class="stats-bar">
-                <div class="stat-card active-calls">
-                    <div class="stat-value" id="statActiveCalls">0</div>
-                    <div class="stat-label">Active Calls</div>
-                </div>
-                <div class="stat-card pending">
-                    <div class="stat-value" id="statPending">0</div>
-                    <div class="stat-label">Pending Incidents</div>
-                </div>
-                <div class="stat-card resolved">
-                    <div class="stat-value" id="statResolved">0</div>
-                    <div class="stat-label">Resolved</div>
-                </div>
-                <div class="stat-card total">
-                    <div class="stat-value" id="statTotal">0</div>
-                    <div class="stat-label">Total Logged</div>
-                </div>
+                    <div class="stat-card active-calls">
+                        <div class="stat-content-row">
+                            <span class="stat-icon-box active-calls"><i class="fas fa-phone-volume"></i></span>
+                            <div>
+                                <div class="stat-value" id="statActiveCalls">0</div>
+                                <div class="stat-label">Active Calls</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-content-row">
+                            <span class="stat-icon-box pending"><i class="fas fa-hourglass-half"></i></span>
+                            <div>
+                                <div class="stat-value" id="statPending">0</div>
+                                <div class="stat-label">Pending Incidents</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card resolved">
+                        <div class="stat-content-row">
+                            <span class="stat-icon-box resolved"><i class="fas fa-check-circle"></i></span>
+                            <div>
+                                <div class="stat-value" id="statResolved">0</div>
+                                <div class="stat-label">Resolved</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card total">
+                        <div class="stat-content-row">
+                            <span class="stat-icon-box total"><i class="fas fa-list-ol"></i></span>
+                            <div>
+                                <div class="stat-value" id="statTotal">0</div>
+                                <div class="stat-label">Total Logged</div>
+                            </div>
+                        </div>
+                    </div>
             </div>
 
             <!-- Grid: Intake + Recent Incidents -->
