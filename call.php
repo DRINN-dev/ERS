@@ -159,7 +159,7 @@ $pageTitle = 'Emergency Call Center';
                                 </div>
                                     <!-- Map picker removed as requested -->
                                 <div class="form-group">
-                                    <label>Priority</label>
+                                    <label>Priority <span id="prioritySuggestion" style="margin-left:8px;font-size:12px;color:#6b7280;"></span></label>
                                     <div class="priority-select" id="prioritySelect">
                                         <div class="priority-option high" data-value="high">High</div>
                                         <div class="priority-option medium" data-value="medium">Medium</div>
@@ -244,6 +244,8 @@ $pageTitle = 'Emergency Call Center';
     const RESET_RECENT_ON_LOAD = false; // localStorage no longer used
     const API_LIST_URL = 'api/incidents_list.php';
     const API_CREATE_CALL_URL = 'api/calls_create.php';
+    let priorityAuto = true; // auto-apply suggested priority until user overrides
+    let prioritySuggestTimer = null; // debounce timer for suggestion updates
     let currentSearch = '';
     let filterDay = '';
     let filterMonth = '';
@@ -257,6 +259,19 @@ $pageTitle = 'Emergency Call Center';
             incidentItems = [];
             renderIncidents();
             updateStats();
+        }
+        // Hook suggestion on description input
+        const descEl = document.getElementById('incidentDescription');
+        if (descEl) {
+            descEl.addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (prioritySuggestTimer) clearTimeout(prioritySuggestTimer);
+                prioritySuggestTimer = setTimeout(() => updatePrioritySuggestion(val), 250);
+            });
+            // Initialize suggestion only if there is content
+            if ((descEl.value || '').trim().length >= 3) {
+                updatePrioritySuggestion(descEl.value);
+            }
         }
     });
 
@@ -318,15 +333,108 @@ $pageTitle = 'Emergency Call Center';
         }
     }
 
+    function setPrioritySelection(value) {
+        const options = document.querySelectorAll('#prioritySelect .priority-option');
+        let applied = false;
+        options.forEach(o => {
+            if (o.dataset.value === value) {
+                o.classList.add('active');
+                applied = true;
+            } else {
+                o.classList.remove('active');
+            }
+        });
+        if (applied) {
+            document.getElementById('incidentPriority').value = value;
+        }
+    }
+
     function initPrioritySelect() {
         const options = document.querySelectorAll('#prioritySelect .priority-option');
         options.forEach(opt => {
             opt.addEventListener('click', () => {
-                options.forEach(o => o.classList.remove('active'));
-                opt.classList.add('active');
-                document.getElementById('incidentPriority').value = opt.dataset.value;
+                priorityAuto = false; // user manually chose a priority
+                setPrioritySelection(opt.dataset.value);
             });
         });
+    }
+
+    function suggestPriorityFromDescription(desc) {
+        const text = (desc || '').toLowerCase();
+
+        // High severity keywords (EN + Tagalog)
+        const high = [
+            // English
+            'unconscious','non-responsive','not breathing','difficulty breathing','chest pain','severe bleeding',
+            'gunshot','shot','stab','stabbing','weapon','armed','fire','explosion','earthquake','flood','collapsed',
+            'stroke','seizure','multi-vehicle','mass casualty','cardiac arrest','resuscitation','burns','critical','life-threatening',
+            // Tagalog
+            'walang malay','hindi humihinga','nahihirapang huminga','matinding pagdurugo','barilan','binaril','saksak',
+            'may armas','sunog','pagsabog','lindol','baha','gumuho','stroke','kombulsyon','maramihang sasakyan','maraming nasugatan',
+            'tumigil ang puso','hinto ang puso','delikado','malubha','grabe','seryoso'
+        ];
+
+        // Medium severity keywords (EN + Tagalog)
+        const medium = [
+            // English
+            'injury','fracture','sprain','minor bleeding','assault','robbery','burglary','smoke','collision','accident',
+            'traffic','missing','distress','dizziness','fever','vomiting','pregnant','labor','child','elderly',
+            // Tagalog
+            'sugat','pilay','bukol','bahagyang pagdurugo','bugbog','aksidente','banggaan','trapiko','nawawala',
+            'nahilo','lagnat','pagsusuka','buntis','manganganak','bata','matanda'
+        ];
+
+        // Negative/low indicators to reduce severity
+        const negative = [
+            'minor','bahagya','walang sugat','hindi seryoso','okay na','stable','stable na','mild'
+        ];
+
+        // Intensifiers boost
+        const intensifiers = [
+            'critical','life-threatening','delikado','malubha','grabe','seryoso','urgent','agarang'
+        ];
+
+        // Count-based escalation (EN + Tagalog)
+        const manyPattern = /(\d+|multiple|many|several|marami|ilan)\s+(nasugatan|injured|pasiente|patients|tao|people|biktima|victims|sasakyan|vehicles|kotse|cars)/;
+
+        // Scoring model
+        let score = 0;
+        const hasAny = (arr) => arr.some(k => text.includes(k));
+        const addIf = (arr, pts) => { if (hasAny(arr)) score += pts; };
+
+        // Apply weights
+        addIf(high, 3);
+        addIf(medium, 2);
+        addIf(intensifiers, 2);
+        if (manyPattern.test(text)) score += 2;
+        if (hasAny(negative)) score -= 2;
+
+        // Specific lethal patterns
+        const arrestPatterns = ['cardiac arrest','tumigil ang puso','hinto ang puso'];
+        if (hasAny(arrestPatterns)) score += 3;
+
+        // Determine priority
+        if (score >= 5) return 'high';
+        if (score >= 2) return 'medium';
+        return 'low';
+    }
+
+    function updatePrioritySuggestion(desc) {
+        const text = (desc || '').trim();
+        const badge = document.getElementById('prioritySuggestion');
+        // Show suggestion only after user types some description
+        if (!text || text.length < 3) {
+            if (badge) badge.textContent = '';
+            return;
+        }
+        const suggested = suggestPriorityFromDescription(text);
+        if (badge) {
+            const label = suggested.charAt(0).toUpperCase() + suggested.slice(1);
+            badge.textContent = `(Suggested: ${label})`;
+        }
+        if (priorityAuto) {
+            setPrioritySelection(suggested);
+        }
     }
 
     function initIncidentSidebarControls() {
