@@ -3,6 +3,8 @@
 
 
 $pageTitle = 'Inter-Agency Coordination';
+require_once __DIR__ . '/includes/auth.php';
+require_login('interagency.php');
 ?>
 
 <!DOCTYPE html>

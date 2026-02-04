@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading page
+require_login('report.php');
 require_once __DIR__ . '/includes/db.php';
 $pageTitle = 'Analytics & Reporting';
 
@@ -303,6 +306,63 @@ try {
                 </div>
                 <div style="position: relative; width: 100%; height: 320px;">
                     <canvas id="callDurationChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Dispatch Report -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Dispatch Report</h3>
+                    <div class="chart-controls">
+                        <button class="btn-report" onclick="refreshDispatchReport()"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn-report" onclick="window.open('api/reports_dispatch.php' + buildQuery(currentFilters), '_blank')"><i class="fas fa-file-pdf"></i> Open Full</button>
+                    </div>
+                </div>
+                <div class="analytics-grid">
+                    <div class="analytics-card response-time">
+                        <div class="metric-label">Total Dispatches</div>
+                        <div class="metric-display"><div class="metric-value" id="dispTotal">0</div><div class="metric-change neutral"><i class="fas fa-minus"></i></div></div>
+                        <div style="color:#666;font-size:0.9rem">Period filter applies</div>
+                    </div>
+                    <div class="analytics-card incidents">
+                        <div class="metric-label">Avg Time to Acknowledge</div>
+                        <div class="metric-display"><div class="metric-value" id="dispAck">0.0</div><div class="metric-change positive"><i class="fas fa-arrow-down"></i></div></div>
+                        <div style="color:#666;font-size:0.9rem">Target: &lt; 2m</div>
+                    </div>
+                    <div class="analytics-card resources">
+                        <div class="metric-label">Avg Time to On Scene</div>
+                        <div class="metric-display"><div class="metric-value" id="dispOnScene">0.0</div><div class="metric-change positive"><i class="fas fa-arrow-down"></i></div></div>
+                        <div style="color:#666;font-size:0.9rem">Target: &lt; 15m</div>
+                    </div>
+                    <div class="analytics-card performance">
+                        <div class="metric-label">SLA Breach Rate</div>
+                        <div class="metric-display"><div class="metric-value" id="dispBreach">0.0%</div><div class="metric-change neutral"><i class="fas fa-minus"></i></div></div>
+                        <div style="color:#666;font-size:0.9rem">Threshold: 15m to on-scene</div>
+                    </div>
+                </div>
+                <div style="position: relative; width: 100%; height: 280px;">
+                    <canvas id="dispatchDailyChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Dispatch Breakdown Table -->
+            <div class="data-table">
+                <div class="table-header">
+                    <h3 class="table-title">Dispatch Breakdown</h3>
+                </div>
+                <div class="table-container">
+                    <table class="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Type</th>
+                                <th>Dispatches</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dispatchTopUnitsBody">
+                            <tr><td colspan="3" style="color:#6b7280">Loading dispatches…</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -759,6 +819,7 @@ try {
         let responseChart = null;
         let typesChart = null;
         let callDurationChart = null;
+        let dispatchDailyChart = null;
 
         async function refreshCharts(filters = {}) {
             try {
@@ -870,6 +931,27 @@ try {
                         }
                     }
                 }
+                // Dispatch daily chart
+                const dispRes = await fetch('api/reports_dispatch.php' + qs);
+                const dispData = await dispRes.json();
+                if (dispData.ok) {
+                    const labels = dispData.daily?.labels || [];
+                    const values = dispData.daily?.data || [];
+                    const ctx4 = document.getElementById('dispatchDailyChart');
+                    if (ctx4) {
+                        if (!dispatchDailyChart) {
+                            dispatchDailyChart = new Chart(ctx4, {
+                                type: 'bar',
+                                data: { labels, datasets: [{ label: 'Dispatches per Day', data: values, backgroundColor: '#10b981' }] },
+                                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                            });
+                        } else {
+                            dispatchDailyChart.data.labels = labels;
+                            dispatchDailyChart.data.datasets[0].data = values;
+                            dispatchDailyChart.update();
+                        }
+                    }
+                }
             } catch (e) { /* silent */ }
         }
 
@@ -892,6 +974,22 @@ try {
                 if (deltaEl) deltaEl.textContent = Math.max(0, (m.total_incidents_month ?? 0) - (m.total_incidents_last_month ?? 0));
                 if (utilEl) utilEl.textContent = ((m.resource_utilization ?? 0)).toFixed(1) + '%';
                 if (successEl) successEl.textContent = ((m.success_rate ?? 0)).toFixed(1) + '%';
+                // Dispatch metrics
+                const dispRes = await fetch('api/reports_dispatch.php' + qs);
+                const disp = await dispRes.json();
+                if (disp.ok) {
+                    const dm = disp.metrics || {};
+                    const totalEl = document.getElementById('dispTotal');
+                    const ackEl = document.getElementById('dispAck');
+                    const onSceneEl = document.getElementById('dispOnScene');
+                    const breachEl = document.getElementById('dispBreach');
+                    if (totalEl) totalEl.textContent = dm.total_dispatches ?? 0;
+                    if (ackEl) ackEl.textContent = (dm.avg_ack_min ?? 0).toFixed(1);
+                    if (onSceneEl) onSceneEl.textContent = (dm.avg_on_scene_min ?? 0).toFixed(1);
+                    if (breachEl) breachEl.textContent = ((dm.sla_breach_rate ?? 0)).toFixed(1) + '%';
+                    // Render top units
+                    renderDispatchTopUnits(disp.top_units || []);
+                }
             } catch (e) {
                 // silent fail
             }
@@ -966,6 +1064,27 @@ try {
                     </td>
                 </tr>`;
             }).join('');
+        }
+
+        function renderDispatchTopUnits(items) {
+            const tbody = document.getElementById('dispatchTopUnitsBody');
+            if (!tbody) return;
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color:#6b7280">No dispatches found for selected period</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = items.map(u => `
+                <tr>
+                    <td>${u.identifier}</td>
+                    <td>${(u.unit_type || '').charAt(0).toUpperCase() + (u.unit_type || '').slice(1)}</td>
+                    <td>${u.count}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function refreshDispatchReport() {
+            await Promise.all([refreshMetrics(currentFilters), refreshCharts(currentFilters)]);
+            showNotification('Dispatch report refreshed', 'success');
         }
 
         // Initialize

@@ -1,5 +1,7 @@
 <?php
-
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading page
+require_login('incident.php');
 
 $pageTitle = 'Incident Priority Management';
 ?>
@@ -63,6 +65,15 @@ $pageTitle = 'Incident Priority Management';
                     <div class="stats-content">
                         <h3>15</h3>
                         <p>Low Priority Incidents</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon resolved">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stats-content">
+                        <h3>0</h3>
+                        <p>Resolved Incidents</p>
                     </div>
                 </div>
             </div>
@@ -218,9 +229,37 @@ $pageTitle = 'Incident Priority Management';
                 // Cycle through priorities: high -> medium -> low -> high
                 let current = (incident.priority || 'low').toLowerCase();
                 let newPriority = current === 'high' ? 'medium' : (current === 'medium' ? 'low' : 'high');
+                const prevPriority = incident.priority;
+                // Optimistic UI update
                 incident.priority = newPriority;
                 renderDynamicIncidents();
-                showNotification(`Incident priority changed to ${newPriority.toUpperCase()}`, 'success');
+
+                const incidentId = incident.id || null;
+                if (incidentId) {
+                    fetch('api/incident_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: incidentId, priority: newPriority })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res && res.ok) {
+                            showNotification(`Incident priority changed to ${newPriority.toUpperCase()}`, 'success');
+                            try { localStorage.setItem('ers_incidents_changed', String(Date.now())); } catch (e) {}
+                        } else {
+                            incident.priority = prevPriority;
+                            renderDynamicIncidents();
+                            showNotification('Failed to update priority on server', 'error');
+                        }
+                    })
+                    .catch(() => {
+                        incident.priority = prevPriority;
+                        renderDynamicIncidents();
+                        showNotification('Network error while updating priority', 'error');
+                    });
+                } else {
+                    showNotification(`Incident priority changed to ${newPriority.toUpperCase()} (local)`, 'info');
+                }
                 return;
             }
 
@@ -396,9 +435,18 @@ $pageTitle = 'Incident Priority Management';
                 else if (p === 'medium') mediumCount++;
                 else lowCount++;
             });
-            document.querySelector('.stats-content h3').textContent = highCount;
-            document.querySelectorAll('.stats-content h3')[1].textContent = mediumCount;
-            document.querySelectorAll('.stats-content h3')[2].textContent = lowCount;
+            const h3s = document.querySelectorAll('.stats-content h3');
+            if (h3s[0]) h3s[0].textContent = highCount;
+            if (h3s[1]) h3s[1].textContent = mediumCount;
+            if (h3s[2]) h3s[2].textContent = lowCount;
+
+            // Resolved count from overall incidents (not hidden by default filter)
+            let resolvedCount = 0;
+            (INCIDENTS || []).forEach(i => {
+                const s = (i.status || '').toLowerCase();
+                if (s === 'resolved' || s === 'cancelled') resolvedCount++;
+            });
+            if (h3s[3]) h3s[3].textContent = resolvedCount;
         }
 
         function mapStatusToBadge(status) {

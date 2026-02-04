@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading page
+require_login('dispatch.php');
 $pageTitle = 'Emergency Dispatch Center';
 
 // Initialize default values
@@ -77,26 +80,6 @@ try {
                 <div>
                     <strong>System Status:</strong> <?php echo htmlspecialchars($systemStatus); ?> | Active incidents: <?php echo $activeIncidents; ?> | Available units: <?php echo $availableUnits; ?>
                 </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <button class="quick-action-btn" onclick="emergencyBroadcast()">
-                    <i class="fas fa-bullhorn"></i>
-                    Emergency Broadcast
-                </button>
-                <button class="quick-action-btn" onclick="lockdownProtocol()">
-                    <i class="fas fa-shield-alt"></i>
-                    Lockdown Protocol
-                </button>
-                <button class="quick-action-btn" onclick="massCasualty()">
-                    <i class="fas fa-users"></i>
-                    Mass Casualty Response
-                </button>
-                <button class="quick-action-btn" onclick="resourceRequest()">
-                    <i class="fas fa-truck"></i>
-                    Resource Request
-                </button>
             </div>
 
             <!-- Main Dispatch Grid -->

@@ -1,5 +1,10 @@
 <?php
 $pageTitle = 'Resources Status Management';
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading page
+require_login('resources.php');
+$current_user = function_exists('get_logged_in_user') ? get_logged_in_user() : null;
+$requestor_name = $current_user ? ($current_user['name'] ?? ($current_user['email'] ?? '')) : '';
 
 // Initialize default values
 $totalVehicles = 0;
@@ -58,107 +63,7 @@ try {
             <div style="height: 3.5rem;"></div>
                         </div>
 
-                        <!-- Resource Requests Table (moved below All Resources) -->
-                        <div class="resource-requests-table-section" style="margin-top:2rem;">
-                            <h2 style="font-size: 1.2rem; font-weight: 700; color: #333; margin-bottom: 1rem; display: flex; align-items: center;">
-                                <i class="fas fa-clipboard-list" style="margin-right: 0.5rem; color: #007bff;"></i>
-                                Request
-                            </h2>
-                            <div style="overflow-x:auto;">
-                            <style>
-                            .request-table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                font-size: 1.08rem;
-                            }
-                            .request-table th, .request-table td {
-                                padding: 0.75em 1em;
-                                border: 1px solid #e0e0e0;
-                                text-align: left;
-                            }
-                            .request-table th {
-                                background: #f7f7f7;
-                                font-size: 1.13rem;
-                            }
-                            .request-status-pending {
-                                background: #fff3cd;
-                                color: #856404;
-                                font-weight: 600;
-                                border-radius: 16px;
-                                padding: 0.3em 1em;
-                                font-size: 0.98em;
-                                display: inline-block;
-                            }
-                            .request-status-approved {
-                                background: #d4edda;
-                                color: #218838;
-                                font-weight: 600;
-                                border-radius: 16px;
-                                padding: 0.3em 1em;
-                                font-size: 0.98em;
-                                display: inline-block;
-                            }
-                            .request-status-rejected {
-                                background: #f8d7da;
-                                color: #721c24;
-                                font-weight: 600;
-                                border-radius: 16px;
-                                padding: 0.3em 1em;
-                                font-size: 0.98em;
-                                display: inline-block;
-                            }
-                            </style>
-                            <table class="request-table">
-                                <thead>
-                                    <tr>
-                                        <th>Requestor</th>
-                                        <th>Resource Name</th>
-                                        <th>Type</th>
-                                        <th>Quantity</th>
-                                        <th>Priority</th>
-                                        <th>Location</th>
-                                        <th>Status</th>
-                                        <th>Date Requested</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    // Fetch resource requests from DB
-                                    try {
-                                        if ($pdo) {
-                                            $stmt = $pdo->query("SELECT * FROM resource_requests ORDER BY date_requested DESC LIMIT 50");
-                                            while ($row = $stmt->fetch()) {
-                                                $details = json_decode($row['details'], true);
-                                                $type = $details['type'] ?? '';
-                                                $quantity = $details['quantity'] ?? '';
-                                                $priority = $details['priority'] ?? '';
-                                                $location = $details['location'] ?? '';
-                                                $notes = $details['notes'] ?? '';
-                                                $statusClass = 'request-status-' . strtolower($row['status']);
-                                                echo '<tr>';
-                                                echo '<td>' . htmlspecialchars($row['requestor']) . '</td>';
-                                                echo '<td>' . htmlspecialchars($row['resource_name']) . '</td>';
-                                                echo '<td>' . htmlspecialchars(ucfirst($type)) . '</td>';
-                                                echo '<td>' . htmlspecialchars($quantity) . '</td>';
-                                                echo '<td>' . htmlspecialchars(ucfirst($priority)) . '</td>';
-                                                echo '<td>' . htmlspecialchars($location) . '</td>';
-                                                echo '<td><span class="' . $statusClass . '">' . htmlspecialchars(ucfirst($row['status'])) . '</span></td>';
-                                                echo '<td>' . htmlspecialchars($row['date_requested']) . '</td>';
-                                                echo '<td>' . htmlspecialchars($notes) . '</td>';
-                                                echo '</tr>';
-                                            }
-                                        } else {
-                                            echo '<tr><td colspan="9" style="text-align:center;color:#888;">Unable to connect to database.</td></tr>';
-                                        }
-                                    } catch (Throwable $e) {
-                                        echo '<tr><td colspan="9" style="text-align:center;color:#888;">Error loading requests.</td></tr>';
-                                    }
-                                    ?>
-                                </tbody>
-                            </table>
-                            </div>
-                        </div>
+                        
             <!-- Resource Overview -->
             <div class="resource-overview">
                 <div class="overview-card">
@@ -458,6 +363,86 @@ try {
                 </script>
             </div>
 
+            <!-- Resource Requests Table (placed under All Resources) -->
+            <div class="resource-requests-table-section" style="margin-top:2rem;">
+                <h2 style="font-size: 1.2rem; font-weight: 700; color: #333; margin-bottom: 1rem; display: flex; align-items: center;">
+                    <i class="fas fa-clipboard-list" style="margin-right: 0.5rem; color: #007bff;"></i>
+                    Request
+                </h2>
+                <div style="overflow-x:auto;">
+                <style>
+                .request-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 1.08rem;
+                }
+                .request-table th, .request-table td {
+                    padding: 0.75em 1em;
+                    border: 1px solid #e0e0e0;
+                    text-align: left;
+                }
+                .request-table th {
+                    background: #f7f7f7;
+                    font-size: 1.13rem;
+                }
+                .request-action-btn {
+                    border: none;
+                    border-radius: 6px;
+                    padding: 0.45em 1em;
+                    font-weight: 600;
+                    font-size: 0.95em;
+                    cursor: pointer;
+                    transition: background 0.2s, color 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4em;
+                    background: #007bff;
+                    color: #fff;
+                }
+                .request-action-btn:hover { background: #0056b3; }
+                </style>
+                <table class="request-table">
+                    <thead>
+                        <tr>
+                            <th>Resource Name</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Location</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="request-list">
+                        <?php
+                        // Fetch resource requests from DB
+                        try {
+                            if ($pdo) {
+                                $stmt = $pdo->query("SELECT * FROM resource_requests ORDER BY date_requested DESC LIMIT 50");
+                                while ($row = $stmt->fetch()) {
+                                    $details = json_decode($row['details'], true);
+                                    $type = $details['type'] ?? '';
+                                    $quantity = $details['quantity'] ?? '';
+                                    $location = $details['location'] ?? '';
+                                    $notes = $details['notes'] ?? '';
+                                    echo '<tr data-notes="' . htmlspecialchars($notes) . '">';
+                                    echo '<td>' . htmlspecialchars($row['resource_name']) . '</td>';
+                                    echo '<td>' . htmlspecialchars(ucfirst($type)) . '</td>';
+                                    echo '<td>' . htmlspecialchars($quantity) . '</td>';
+                                    echo '<td>' . htmlspecialchars($location) . '</td>';
+                                    echo '<td><button class="request-action-btn" onclick="viewRequestNotes(this)"><i class=\'fas fa-sticky-note\'></i> View Notes</button></td>';
+                                    echo '</tr>';
+                                }
+                            } else {
+                                echo '<tr><td colspan="5" style="text-align:center;color:#888;">Unable to connect to database.</td></tr>';
+                            }
+                        } catch (Throwable $e) {
+                            echo '<tr><td colspan="5" style="text-align:center;color:#888;">Error loading requests.</td></tr>';
+                        }
+                        ?>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
             <!-- AI-Powered Predictive Analytics -->
             <div class="ai-predictive-section">
                 <div class="ai-predictive-card">
@@ -508,6 +493,7 @@ try {
             <div class="modal-body">
                 <form id="resourceRequestForm" onsubmit="submitResourceRequest(event)">
                     <div class="form-group">
+                        <input type="hidden" name="requestor" value="<?php echo htmlspecialchars($requestor_name); ?>">
                         <label for="request-resource-type">Resource Type <span class="required">*</span></label>
                         <select id="request-resource-type" name="resource_type" required onchange="updateResourceFormFields()">
                             <option value="">Select Resource Type</option>
@@ -599,6 +585,24 @@ try {
         </div>
     </div>
 
+    <!-- Request Notes Modal -->
+    <div class="resource-request-modal" id="requestNotesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Request Notes</h3>
+                <button class="modal-close" onclick="(function(){document.getElementById('requestNotesModal').classList.remove('show'); document.body.style.overflow='';})()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="requestNotesContent" style="line-height:1.6; color:#333;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="(function(){document.getElementById('requestNotesModal').classList.remove('show'); document.body.style.overflow='';})()">Close</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Emergency Personnel Scheduling Modal -->
     <div class="resource-request-modal" id="scheduleModal">
@@ -673,12 +677,34 @@ try {
                 if (e.key === 'Escape' && modal.classList.contains('show')) closeScheduleModal();
             });
         });
-                // Update form fields based on resource type
+        // Close notes modal with Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const notesModal = document.getElementById('requestNotesModal');
+                if (notesModal && notesModal.classList.contains('show')) {
+                    notesModal.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+                // Update form fields based on resource type and adjust required inputs
                 function updateResourceFormFields() {
                     var type = document.getElementById('request-resource-type').value;
-                    document.getElementById('vehicle-fields').style.display = (type === 'vehicle' || type === 'facility' || type === '') ? '' : 'none';
-                    document.getElementById('personnel-fields').style.display = (type === 'personnel') ? '' : 'none';
-                    document.getElementById('equipment-fields').style.display = (type === 'equipment') ? '' : 'none';
+                    var vehicleFields = document.getElementById('vehicle-fields');
+                    var personnelFields = document.getElementById('personnel-fields');
+                    var equipmentFields = document.getElementById('equipment-fields');
+                    var vehicleName = document.getElementById('request-resource-name');
+                    var personnelName = document.getElementById('personnel-name');
+                    var equipmentType = document.getElementById('equipment-type');
+
+                    vehicleFields.style.display = (type === 'vehicle' || type === 'facility' || type === '') ? '' : 'none';
+                    personnelFields.style.display = (type === 'personnel') ? '' : 'none';
+                    equipmentFields.style.display = (type === 'equipment') ? '' : 'none';
+
+                    // Toggle required attributes so hidden fields don't block submission
+                    if (vehicleName) vehicleName.required = (type === 'vehicle' || type === 'facility' || type === '');
+                    if (personnelName) personnelName.required = (type === 'personnel');
+                    if (equipmentType) equipmentType.required = (type === 'equipment');
                 }
                 // Initialize on modal open
                 document.addEventListener('DOMContentLoaded', function() {
@@ -895,27 +921,88 @@ try {
 
         function submitResourceRequest(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
+            const formEl = event.target;
+            const formData = new FormData(formEl);
+            // Ensure requestor present (fallback if session missing)
+            if (!formData.get('requestor') || String(formData.get('requestor')).trim() === '') {
+                formData.set('requestor', 'Admin');
+            }
+            // Normalize resource_name for non-vehicle types
+            const selectedType = formData.get('resource_type');
+            if (!formData.get('resource_name')) {
+                if (selectedType === 'personnel') {
+                    const pn = formEl.querySelector('#personnel-name')?.value || '';
+                    if (pn) formData.set('resource_name', pn);
+                } else if (selectedType === 'equipment') {
+                    const et = formEl.querySelector('#equipment-type')?.value || '';
+                    if (et) formData.set('resource_name', et);
+                }
+            }
             const data = Object.fromEntries(formData);
-            
-            // Here you would send this to your backend API
-            // For now, we'll simulate the submission
-            showNotification(`Resource request submitted: ${data.quantity}x ${data.resource_name} (${data.resource_type})`, 'success');
-            
-            // Close modal after a brief delay
-            setTimeout(() => {
-                closeResourceModal();
-            }, 1500);
-            
-            // In production, you would do:
-            // fetch('api/request_resource.php', {
-            //     method: 'POST',
-            //     body: formData
-            // }).then(response => response.json())
-            //   .then(data => {
-            //       showNotification('Resource request submitted successfully', 'success');
-            //       closeResourceModal();
-            //   });
+
+            fetch('api/request_resource.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(resp => resp.json())
+            .then(res => {
+                if (res && res.success) {
+                    showNotification(`Resource request submitted: ${data.quantity}x ${data.resource_name} (${data.resource_type})`, 'success');
+                    appendRequestRow({
+                        resource_name: data.resource_name || '',
+                        resource_type: data.resource_type || '',
+                        quantity: data.quantity || 1,
+                        location: data.location || '',
+                        notes: data.notes || ''
+                    });
+                    closeResourceModal();
+                    formEl.reset();
+                } else {
+                    showNotification(`Failed to submit request: ${res && res.error ? res.error : 'Unknown error'}`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error('request_resource error', err);
+                showNotification('Network error submitting request', 'error');
+            });
+        }
+
+        function appendRequestRow(row) {
+            const tbody = document.getElementById('request-list');
+            if (!tbody) return;
+            const tr = document.createElement('tr');
+            const typeLabel = (row.resource_type || '').charAt(0).toUpperCase() + (row.resource_type || '').slice(1);
+            tr.setAttribute('data-notes', row.notes || '');
+            tr.innerHTML = `
+                <td>${escapeHtml(row.resource_name || '')}</td>
+                <td>${escapeHtml(typeLabel)}</td>
+                <td>${escapeHtml(row.quantity || '')}</td>
+                <td>${escapeHtml(row.location || '')}</td>
+                <td><button class="request-action-btn" onclick="viewRequestNotes(this)"><i class='fas fa-sticky-note'></i> View Notes</button></td>
+            `;
+            tbody.prepend(tr);
+        }
+
+        function viewRequestNotes(btn) {
+            const tr = btn.closest('tr');
+            const notes = tr ? tr.getAttribute('data-notes') : '';
+            const name = tr ? tr.children[0].textContent : 'Request';
+            const modal = document.getElementById('requestNotesModal');
+            const content = document.getElementById('requestNotesContent');
+            if (modal && content) {
+                content.innerHTML = `<strong>${escapeHtml(name)}</strong><br>${notes ? escapeHtml(notes) : 'No notes provided.'}`;
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
 

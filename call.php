@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading page
+require_login('call.php');
 
 $pageTitle = 'Emergency Call Center';
 ?>

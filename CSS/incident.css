@@ -196,6 +196,7 @@
         .stats-icon.high { background-color: #ffebee; color: #f44336; }
         .stats-icon.medium { background-color: #fff3e0; color: #ff9800; }
         .stats-icon.low { background-color: #e8f5e8; color: #4caf50; }
+        .stats-icon.resolved { background-color: #e9f7ef; color: #1e7e34; }
 
         .stats-content h3 {
             margin: 0;
