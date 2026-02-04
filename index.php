@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+// Require full login (including OTP verification) before loading dashboard
+require_login('index.php');
+
 $apiKey = "225acf0f31b12ee9281d3aa19c94a57e";
 $city   = "Quezon";
 
