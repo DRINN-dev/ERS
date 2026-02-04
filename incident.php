@@ -111,10 +111,13 @@ $pageTitle = 'Incident Priority Management';
 
             <!-- Logged Incidents (Dynamic) -->
             <div class="priority-section" style="margin-top: 1.5rem;">
-                <h2 class="section-title" style="font-size: 1.2rem;">
-                    <i class="fas fa-list"></i>
-                    Logged Incidents
-                </h2>
+                <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                    <h2 class="section-title" style="font-size: 1.2rem; margin:0;">
+                        <i class="fas fa-list"></i>
+                        Logged Incidents
+                    </h2>
+                    <button id="btn-view-resolved" class="btn-action" title="Show all resolved incidents">View Resolved</button>
+                </div>
                 <div id="incident-list-dynamic"></div>
                 <!-- Table will be rendered here by JS -->
                 <div id="incident-list-dynamic"></div>
@@ -372,6 +375,16 @@ $pageTitle = 'Incident Priority Management';
             renderDynamicIncidents();
         });
 
+        // Header button: View Resolved (opens modal)
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnResolved = document.getElementById('btn-view-resolved');
+            if (btnResolved) {
+                btnResolved.addEventListener('click', function() {
+                    openResolvedModal();
+                });
+            }
+        });
+
         // Update statistics
         function updateStats() {
             // Count based on currently filtered incidents
@@ -430,10 +443,12 @@ $pageTitle = 'Incident Priority Management';
 
             if (priorityValue && (i.priority || '').toLowerCase() !== priorityValue) return false;
 
-            if (statusValue) {
+            // Default: exclude resolved incidents from logged list unless explicitly filtered
+            {
                 const s = (i.status || '').toLowerCase();
                 const mapped = s === 'dispatched' ? 'dispatched' : (s === 'resolved' || s === 'cancelled' ? 'resolved' : 'active');
-                if (mapped !== statusValue) return false;
+                if (!statusValue && mapped === 'resolved') return false; // hide resolved by default
+                if (statusValue && mapped !== statusValue) return false;   // respect explicit filter selection
             }
 
             if (typeValue && (i.type || '').toLowerCase() !== typeValue) return false;
@@ -765,6 +780,203 @@ $pageTitle = 'Incident Priority Management';
             }
         } catch (e) {}
     });
+    </script>
+    
+    <script>
+        // Resolved incidents modal: list + per-incident details
+        function openResolvedModal() {
+            let modal = document.getElementById('incident-resolved-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'incident-resolved-modal';
+                modal.innerHTML = `
+                    <div class="modal-backdrop"></div>
+                    <div class="modal-content" style="min-width:520px;max-width:860px;position:relative;">
+                        <h3 style="margin:0 2.2rem 0 0;">Resolved Incidents</h3>
+                        <button type="button" id="resolved-close-btn" aria-label="Close" title="Close">&times;</button>
+                        <div id="resolved-controls" class="resolved-controls" style="margin-top:0.8em;display:flex;gap:0.6em;flex-wrap:wrap;align-items:center;">
+                            <input id="resolved-search" type="text" placeholder="Search reference, type, location" style="flex:1;min-width:220px;padding:0.55em;border:1px solid #ddd;border-radius:6px;">
+                            <input id="resolved-date" type="date" style="padding:0.5em;border:1px solid #ddd;border-radius:6px;">
+                            <input id="resolved-month" type="month" style="padding:0.5em;border:1px solid #ddd;border-radius:6px;">
+                            <button id="resolved-clear" title="Clear filters" style="padding:0.5em 0.9em;border:none;border-radius:6px;background:#f3f3f3;color:#333;cursor:pointer;">Clear Filters</button>
+                        </div>
+                        <div id="resolved-list" style="margin-top:0.8em;max-height:320px;overflow:auto;border:1px solid #eee;border-radius:8px;background:#fafafa;"></div>
+                        <div id="resolved-details" style="margin-top:1em;padding:0.75em;border:1px solid #eee;border-radius:8px;background:#fff;">
+                            <div style="color:#666;">Select an incident and click Details to view more info.</div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                const style = document.createElement('style');
+                style.textContent = `
+                    #incident-resolved-modal { position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2002;display:flex;align-items:center;justify-content:center; }
+                    #incident-resolved-modal .modal-backdrop { position:absolute;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
+                    #incident-resolved-modal .modal-content { position:relative;z-index:1;background:#fff;padding:1.2em 1.2em 1.2em;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,0.18);min-width:540px;max-width:960px; border:1px solid #eee; }
+                    #incident-resolved-modal .modal-content h3 { font-size:1.25rem; font-weight:700; color:#1f2d3d; padding-bottom:0.6em; border-bottom: 1px solid #f0f0f0; }
+                    #resolved-close-btn { position:absolute; top:12px; right:14px; width:34px; height:34px; line-height:32px; text-align:center; font-size:22px; border-radius:8px; border:1px solid #e5e5e5; cursor:pointer; background:#fafafa; color:#333; transition: all 0.2s ease; }
+                    #resolved-close-btn:hover { background:#efefef; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+                    .resolved-controls { margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap; align-items:center; }
+                    .resolved-controls input[type="text"],
+                    .resolved-controls input[type="date"],
+                    .resolved-controls input[type="month"] { padding:0.55em 0.7em; border:1px solid #dcdcdc; border-radius:8px; font-size:0.95rem; outline:none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+                    .resolved-controls input:focus { border-color:#3399ff; box-shadow:0 0 0 3px rgba(51,153,255,0.12); }
+                    #resolved-clear { padding:0.55em 0.9em; border:1px solid #e5e5e5; border-radius:8px; background:#f7f7f7; color:#333; cursor:pointer; font-weight:600; }
+                    #resolved-clear:hover { background:#efefef; }
+
+                    #resolved-list { margin-top:0.8em; max-height:340px; overflow:auto; border:1px solid #eee; border-radius:10px; background:#fbfbfb; }
+                    .resolved-item { display:flex; align-items:center; justify-content:space-between; gap:0.75em; padding:0.8em 1.0em; border-bottom:1px solid #eaeaea; transition: background 0.15s ease; }
+                    .resolved-item:hover { background:#f7faff; }
+                    .resolved-item:last-child { border-bottom:none; }
+                    .resolved-main { display:flex; flex-wrap:wrap; gap:0.6em; color:#2b2b2b; align-items:center; }
+                    .resolved-main .ref { font-weight:700; color:#1a1a1a; }
+                    .resolved-main .type { color:#555; }
+                    .resolved-main .meta { color:#777; font-size:0.92rem; }
+                    .badge { display:inline-flex; align-items:center; gap:0.35em; padding:0.25em 0.55em; border-radius:999px; font-size:0.86rem; font-weight:600; }
+                    .badge-resolved { background:#e9f7ef; color:#1e7e34; border:1px solid #d4edda; }
+                    .badge-type { background:#eef2ff; color:#3730a3; border:1px solid #e0e7ff; }
+                    .resolved-actions .btn-resolved-details { padding:0.5em 0.95em; font-size:0.95em; border-radius:8px; border:1px solid #0a64d2; cursor:pointer; background:#0b74ff; color:#fff; font-weight:600; transition: all 0.2s ease; }
+                    .resolved-actions .btn-resolved-details:hover { background:#085fd1; box-shadow:0 2px 8px rgba(11,116,255,0.25); }
+
+                    #resolved-details { margin-top:1em; padding:0.9em; border:1px solid #eee; border-radius:10px; background:#fff; }
+                    .details-header { display:flex; align-items:center; justify-content:space-between; gap:0.75em; padding-bottom:0.5em; border-bottom:1px solid #f0f0f0; }
+                    .details-header .title { font-weight:700; color:#1f2d3d; }
+                    .details-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0.75em 1.2em; margin-top:0.8em; }
+                    .details-grid .detail { background:#fafafa; border:1px solid #f0f0f0; border-radius:8px; padding:0.6em 0.7em; }
+                    .details-grid .label { font-size:0.85rem; color:#666; margin-bottom:0.2em; }
+                    .details-grid .value { color:#222; font-weight:600; }
+
+                    /* Scrollbar polish */
+                    #resolved-list::-webkit-scrollbar { width:10px; height:10px; }
+                    #resolved-list::-webkit-scrollbar-thumb { background:#ddd; border-radius:10px; }
+                    #resolved-list::-webkit-scrollbar-thumb:hover { background:#ccc; }
+                `;
+                document.head.appendChild(style);
+                // Close handler
+                document.getElementById('resolved-close-btn').onclick = function() {
+                    modal.style.display = 'none';
+                };
+                // Details click delegation
+                modal.addEventListener('click', function(e) {
+                    const btn = e.target.closest('button');
+                    if (!btn) return;
+                    if (btn.classList.contains('btn-resolved-details')) {
+                        const id = Number(btn.getAttribute('data-id') || '0');
+                        if (id > 0) loadResolvedDetails(id);
+                    }
+                });
+            }
+            modal.style.display = 'flex';
+            const listEl = document.getElementById('resolved-list');
+            const detailsEl = document.getElementById('resolved-details');
+            const controlsEl = document.getElementById('resolved-controls');
+            listEl.innerHTML = '<div class="resolved-item"><div>Loading resolved incidents...</div></div>';
+            detailsEl.innerHTML = '<div style="color:#666;">Select an incident and click Details to view more info.</div>';
+
+            // Wire filters once
+            if (controlsEl && !controlsEl.dataset.wired) {
+                const searchInput = document.getElementById('resolved-search');
+                const dateInput = document.getElementById('resolved-date');
+                const monthInput = document.getElementById('resolved-month');
+                let searchTimer = null;
+                const scheduleSearch = () => {
+                    if (searchTimer) clearTimeout(searchTimer);
+                    searchTimer = setTimeout(loadResolvedList, 250);
+                };
+                if (searchInput) searchInput.addEventListener('input', scheduleSearch);
+                if (dateInput) dateInput.addEventListener('change', () => { if (dateInput.value) { if (monthInput) monthInput.value = ''; } loadResolvedList(); });
+                if (monthInput) monthInput.addEventListener('change', () => { if (monthInput.value) { if (dateInput) dateInput.value = ''; } loadResolvedList(); });
+                const clearBtn = document.getElementById('resolved-clear');
+                if (clearBtn) clearBtn.addEventListener('click', () => {
+                    if (searchInput) searchInput.value = '';
+                    if (dateInput) dateInput.value = '';
+                    if (monthInput) monthInput.value = '';
+                    loadResolvedList();
+                });
+                controlsEl.dataset.wired = '1';
+            }
+
+            function loadResolvedList() {
+                const searchVal = (document.getElementById('resolved-search')?.value || '').trim();
+                const dayVal = document.getElementById('resolved-date')?.value || '';
+                const monthVal = document.getElementById('resolved-month')?.value || '';
+                const params = new URLSearchParams();
+                params.append('status', 'resolved');
+                if (searchVal) params.append('search', searchVal);
+                if (dayVal) params.append('day', dayVal); else if (monthVal) params.append('month', monthVal);
+                fetch(API_LIST_URL + '?' + params.toString())
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.ok) {
+                            const items = data.items || [];
+                            if (!items.length) {
+                                listEl.innerHTML = '<div class="resolved-item"><div>No resolved incidents.</div></div>';
+                            } else {
+                                listEl.innerHTML = items.map(i => {
+                                    const ref = (i.incident_code || i.reference_no || '').toString();
+                                    const type = (i.type || '').toString();
+                                    const created = new Date(i.created_at || Date.now()).toLocaleString();
+                                    return `
+                                        <div class="resolved-item">
+                                            <div class="resolved-main">
+                                                <span class="ref">${ref}</span>
+                                                <span class="badge badge-type">${type || '—'}</span>
+                                                <span class="badge badge-resolved"><i class="fas fa-check-circle"></i> Resolved</span>
+                                                <span class="meta"><i class="fas fa-clock"></i> Created: ${created}</span>
+                                            </div>
+                                            <div class="resolved-actions">
+                                                <button class="btn-resolved-details" data-id="${i.id}"><i class="fas fa-info-circle"></i> Details</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                            }
+                        } else {
+                            listEl.innerHTML = '<div class="resolved-item"><div>Failed to load resolved incidents.</div></div>';
+                        }
+                    })
+                    .catch(() => {
+                        listEl.innerHTML = '<div class="resolved-item"><div>Network error while loading resolved incidents.</div></div>';
+                    });
+            }
+
+            loadResolvedList();
+        }
+
+        function loadResolvedDetails(id) {
+            const detailsEl = document.getElementById('resolved-details');
+            detailsEl.innerHTML = '<div>Loading details...</div>';
+            fetch('api/incident_details.php?id=' + encodeURIComponent(id))
+                .then(r => r.json())
+                .then(data => {
+                    const inc = data && data.incident ? data.incident : null;
+                    if (!inc) {
+                        detailsEl.innerHTML = '<div>Details not available.</div>';
+                        return;
+                    }
+                    const safe = v => (v === null || v === undefined) ? '' : String(v).replace(/</g,'&lt;');
+                    const resolvedAt = inc.resolved_at ? new Date(inc.resolved_at).toLocaleString() : '—';
+                    const createdAt = inc.created_at ? new Date(inc.created_at).toLocaleString() : '—';
+                    const updatedAt = inc.updated_at ? new Date(inc.updated_at).toLocaleString() : '—';
+                    detailsEl.innerHTML = `
+                        <div class="details-header">
+                            <div class="title"><i class="fas fa-hashtag"></i> ${safe(inc.reference_no)} — ${safe(inc.type)}</div>
+                            <span class="badge badge-resolved"><i class="fas fa-check-circle"></i> Resolved</span>
+                        </div>
+                        <div class="details-grid">
+                            <div class="detail"><div class="label">Priority</div><div class="value">${safe(inc.priority)}</div></div>
+                            <div class="detail"><div class="label">Status</div><div class="value">${safe(inc.status)}</div></div>
+                            <div class="detail"><div class="label">Created At</div><div class="value">${createdAt}</div></div>
+                            <div class="detail"><div class="label">Resolved At</div><div class="value">${resolvedAt}</div></div>
+                            <div class="detail"><div class="label">Last Updated</div><div class="value">${updatedAt}</div></div>
+                            <div class="detail"><div class="label">Location</div><div class="value">${safe(inc.location_address)}</div></div>
+                            <div class="detail" style="grid-column:1 / -1"><div class="label">Description</div><div class="value">${safe(inc.description)}</div></div>
+                        </div>
+                    `;
+                })
+                .catch(() => {
+                    detailsEl.innerHTML = '<div>Network error while loading details.</div>';
+                });
+        }
     </script>
 </body>
 </html>
