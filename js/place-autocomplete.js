@@ -31,32 +31,38 @@ function attachPlaceAutocomplete(inputId, onSelect) {
 
         try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=PH&q=${encodeURIComponent(val)}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            dropdown.innerHTML = '';
-            if (data.length === 0) {
-                const noRes = document.createElement('div');
-                noRes.textContent = 'No results found';
-                noRes.style.color = '#888';
-                noRes.style.padding = '8px 12px';
-                dropdown.appendChild(noRes);
-            } else {
-                data.slice(0, 6).forEach(place => {
-                    const item = document.createElement('div');
-                    item.textContent = place.display_name;
-                    item.style.padding = '8px 12px';
-                    item.style.cursor = 'pointer';
-                    item.addEventListener('mousedown', function(e) {
-                        e.preventDefault();
-                        input.value = place.display_name;
-                        if (onSelect) onSelect(place);
-                        dropdown.remove();
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                dropdown.innerHTML = '';
+                if (data.length === 0) {
+                    const noRes = document.createElement('div');
+                    noRes.textContent = 'No results found';
+                    noRes.style.color = '#888';
+                    noRes.style.padding = '8px 12px';
+                    dropdown.appendChild(noRes);
+                } else {
+                    data.slice(0, 6).forEach(place => {
+                        const item = document.createElement('div');
+                        item.textContent = place.display_name;
+                        item.style.padding = '8px 12px';
+                        item.style.cursor = 'pointer';
+                        item.addEventListener('mousedown', function(e) {
+                            e.preventDefault();
+                            input.value = place.display_name;
+                            if (onSelect) onSelect(place);
+                            dropdown.remove();
+                        });
+                        dropdown.appendChild(item);
                     });
-                    dropdown.appendChild(item);
-                });
+                }
+            } catch (e) {
+                console.error('Suggestion fetch error:', e);
+                dropdown.innerHTML = '<div style="padding:8px 12px;color:#888;">Error loading suggestions. Please check your internet connection or try again later.</div>';
             }
         } catch (e) {
-            dropdown.innerHTML = '<div style="padding:8px 12px;color:#888;">Error loading suggestions</div>';
+            console.error('Autocomplete error:', e);
+            dropdown.innerHTML = '<div style="padding:8px 12px;color:#888;">Error initializing suggestions</div>';
         }
     });
     input.addEventListener('blur', function() {

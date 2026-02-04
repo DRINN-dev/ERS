@@ -77,7 +77,7 @@ $pageTitle = 'GPS Tracking System';
                             <button class="map-btn active" onclick="toggleLayer('unit', this)">
                                 <i class="fas fa-ambulance"></i> Units
                             </button>
-                            <button class="map-btn active" onclick="toggleLayer('incident', this)">
+                            <button class="map-btn" onclick="toggleLayer('incident', this)">
                                 <i class="fas fa-exclamation-triangle"></i> Incidents
                             </button>
                             <button class="map-btn" onclick="toggleLayer('routes', this)">
@@ -120,10 +120,11 @@ $pageTitle = 'GPS Tracking System';
     <script>
 let map;
 let markers = {};
-let activeLayers = ['unit', 'incident'];
+let activeLayers = ['unit'];
 let qcBoundaryLayers = { halo: null, line: null };
 let routes = {};
 let QC_BOUNDS_GLOBAL;
+let unitFilter = '';
 
 // ===============================
 // LEAFLET MAP INITIALIZATION
@@ -166,9 +167,7 @@ function initMap() {
 
     initRoutes();
 
-    // Sample incidents so the Incidents button is meaningful
-    addIncidentMarker('incident-1', 14.6700, 121.0300, 'Cardiac Emergency');
-    addIncidentMarker('incident-2', 14.6900, 121.0600, 'Traffic Accident');
+    // Incidents markers disabled: remove sample incidents
 
     // Add legend for marker colors
     addLegendControl();
@@ -217,7 +216,7 @@ function addUnitMarker(id, lat, lng, label, type) {
         .addTo(map)
         .bindPopup(`<strong>${label}</strong><br>Status: ${type === 'incident' ? 'Incident' : 'Active'}`);
 
-    markers[id] = { marker, type: "unit" };
+    markers[id] = { marker, type: "unit", unitType: (type || '').toLowerCase() };
 }
 
 function addIncidentMarker(id, lat, lng, label) {
@@ -286,13 +285,13 @@ function toggleLayer(layer, el) {
 }
 
 function updateMapVisibility() {
-  Object.values(markers).forEach(item => {
-    if (activeLayers.includes(item.type)) {
-      map.addLayer(item.marker);
-    } else {
-      map.removeLayer(item.marker);
-    }
-  });
+    Object.values(markers).forEach(item => {
+        let visible = activeLayers.includes(item.type);
+        if (visible && item.type === 'unit' && unitFilter) {
+            visible = (item.unitType === unitFilter);
+        }
+        visible ? map.addLayer(item.marker) : map.removeLayer(item.marker);
+    });
 
   Object.values(routes).forEach(route => {
     activeLayers.includes("routes")
@@ -394,6 +393,17 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(attempt, 800);
         }
     } catch (e) {}
+});
+
+// Apply unit-type filter from the UI
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('unit-filter');
+    if (!sel) return;
+    sel.addEventListener('change', (e) => {
+        unitFilter = (e.target.value || '').toLowerCase();
+        updateMapVisibility();
+        showNotification(unitFilter ? `Showing ${unitFilter} units` : 'Showing all units', 'info');
+    });
 });
 </script>
 
