@@ -53,6 +53,16 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Fluid media to prevent overflow on small screens */
+img,
+svg,
+video,
+canvas,
+iframe {
+    max-width: 100%;
+    height: auto;
+}
+
 
 /* ===================================
    CUSTOM SCROLLBAR STYLES
@@ -753,6 +763,11 @@ html {
     .theme-toggle {
         order: -1;
     }
+
+    /* General spacing tightening for mobile */
+    .btn { font-size: 13px; }
+    .nav-link { font-size: 13px; }
+}
 }
 
 /* Small Mobile - Single column */
@@ -791,4 +806,7 @@ html {
     .theme-toggle {
         order: 0;
     }
+
+    /* Slightly smaller base type for very small devices */
+    body { font-size: 15px; }
 }
