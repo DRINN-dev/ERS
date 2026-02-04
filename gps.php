@@ -49,8 +49,6 @@ $pageTitle = 'GPS Tracking System';
                             <option value="ambulance">Ambulance Units</option>
                             <option value="police">Police Units</option>
                             <option value="fire">Fire Units</option>
-                            <option value="ambulance-5">Ambulance #5</option>
-                            <option value="police-8">Police Unit #8</option>
                         </select>
                     </div>
                     <div class="control-group">
@@ -107,99 +105,6 @@ $pageTitle = 'GPS Tracking System';
                     </h3>
                     <!-- Scrollable container for units -->
                     <div class="unit-scroll-container" id="unit-scroll-container"></div>
-                </div>
-            </div>
-
-            <!-- Alerts and Routes Row -->
-            <div class="gps-grid">
-                <!-- Alerts Panel -->
-                <div class="alerts-panel">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #333; margin-bottom: 1.5rem; display: flex; align-items: center;">
-                        <i class="fas fa-bell" style="margin-right: 0.5rem; color: #ffc107;"></i>
-                        GPS Alerts & Notifications
-                    </h3>
-
-                    <div class="alert-item warning">
-                        <div class="alert-icon warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div>
-                            <strong>Speed Alert:</strong> Police Unit #8 exceeded speed limit (45 mph in 30 zone)
-                            <br><small>2 minutes ago • Downtown District</small>
-                        </div>
-                    </div>
-
-                    <div class="alert-item danger">
-                        <div class="alert-icon danger">
-                            <i class="fas fa-times-circle"></i>
-                        </div>
-                        <div>
-                            <strong>GPS Signal Lost:</strong> Ambulance #3 lost GPS signal for 30 seconds
-                            <br><small>5 minutes ago • Rural Route 45</small>
-                        </div>
-                    </div>
-
-                    <div class="alert-item">
-                        <div class="alert-icon info">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <div>
-                            <strong>Geofence Alert:</strong> Engine #12 entered restricted zone
-                            <br><small>8 minutes ago • Industrial Park</small>
-                        </div>
-                    </div>
-
-                    <div class="alert-item">
-                        <div class="alert-icon info">
-                            <i class="fas fa-route"></i>
-                        </div>
-                        <div>
-                            <strong>Route Deviation:</strong> Ambulance #5 took alternate route due to traffic
-                            <br><small>12 minutes ago • Highway 101</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Routes Panel -->
-                <div class="route-panel">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #333; margin-bottom: 1.5rem; display: flex; align-items: center;">
-                        <i class="fas fa-route" style="margin-right: 0.5rem; color: #2196f3;"></i>
-                        Active Routes
-                    </h3>
-
-                    <div class="route-list">
-                        <div class="route-item active" onclick="selectRoute('route-1')">
-                            <div class="route-number">1</div>
-                            <div class="route-details">
-                                <div class="route-title">Ambulance #5 → Cardiac Emergency</div>
-                                <div class="route-meta">Station 1 → Downtown Hospital • 8 min ETA • 3.2 miles</div>
-                            </div>
-                        </div>
-
-                        <div class="route-item" onclick="selectRoute('route-2')">
-                            <div class="route-number">2</div>
-                            <div class="route-details">
-                                <div class="route-title">Police Unit #8 → Traffic Accident</div>
-                                <div class="route-meta">Downtown → Highway 101 • 6 min ETA • 4.1 miles</div>
-                            </div>
-                        </div>
-
-                        <div class="route-item" onclick="selectRoute('route-3')">
-                            <div class="route-number">3</div>
-                            <div class="route-details">
-                                <div class="route-title">Engine #12 → Structure Fire</div>
-                                <div class="route-meta">Fire Station → Residential Area • On Scene • 2.8 miles</div>
-                            </div>
-                        </div>
-
-                        <div class="route-item" onclick="selectRoute('route-4')">
-                            <div class="route-number">4</div>
-                            <div class="route-details">
-                                <div class="route-title">Ambulance #3 → Hospital Transport</div>
-                                <div class="route-meta">General Hospital → City Hospital • 12 min ETA • 5.5 miles</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
