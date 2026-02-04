@@ -415,6 +415,21 @@ $pageTitle = 'Emergency Call Center';
             document.querySelectorAll('#prioritySelect .priority-option').forEach(o => o.classList.remove('active'));
             document.getElementById('incidentPriority').value = '';
             await loadIncidentsFromServer();
+            // Log activity event for dashboard Recent Activity
+            try {
+                const details = `Type: ${payload.type} | Location: ${payload.location} | Priority: ${payload.priority}`;
+                await fetch('api/activity_event.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'call_logged',
+                        entity_type: 'call',
+                        details: details
+                    })
+                });
+            } catch (e) {
+                console.warn('Activity log failed', e);
+            }
         } catch (err) {
             console.warn('Submit failed:', err);
             alert('Error while logging incident.');

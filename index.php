@@ -628,11 +628,90 @@ try {
             if (diff < 86400) return Math.floor(diff/3600) + ' hours ago';
             return then.toLocaleString();
         }
+
+        // Render a single activity item
+        function renderActivityItem(a) {
+            const action = (a.action || '').toLowerCase();
+            const icon = action.includes('call') ? 'fa-phone' : action.includes('incident') ? 'fa-exclamation-triangle' : action.includes('unit') ? 'fa-truck' : 'fa-info-circle';
+            const actor = a.username ? ` by ${a.username}` : '';
+            const when = a.created_at ? timeAgo(a.created_at) : '';
+            const details = a.details || '';
+            const entity = a.entity_type ? a.entity_type : 'system';
+            return `
+                <div class="activity-item">
+                    <div class="activity-icon"><i class="fas ${icon}"></i></div>
+                    <div class="activity-content">
+                        <div class="activity-title">${escapeHtml(action)} ${escapeHtml(entity)}${escapeHtml(actor)}</div>
+                        <div class="activity-details">${escapeHtml(details)}</div>
+                        <div class="activity-time">${escapeHtml(when)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load recent activity
+        function loadActivityFeed() {
+            fetch('api/activity_feed.php')
+                .then(r => r.json())
+                .then(data => {
+                    const el = document.getElementById('activity-feed-list');
+                    if (!el) return;
+                    if (!data.ok || !data.data || !data.data.length) {
+                        el.innerHTML = '<div class="activity-item"><div class="activity-content">No recent activity.</div></div>';
+                        return;
+                    }
+                    el.innerHTML = data.data.map(renderActivityItem).join('');
+                })
+                .catch(() => {
+                    const el = document.getElementById('activity-feed-list');
+                    if (el) el.innerHTML = '<div class="activity-item"><div class="activity-content">Failed to load activity.</div></div>';
+                });
+        }
+
+        // Render a single alert item
+        function renderAlertItem(a) {
+            const type = (a.type || 'info').toLowerCase();
+            const icon = type === 'critical' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+            const title = a.title || 'Alert';
+            const details = a.details || '';
+            return `
+                <div class="alert-item ${escapeHtml(type)}">
+                    <div class="alert-icon"><i class="fas ${icon}"></i></div>
+                    <div class="alert-content">
+                        <div class="alert-title">${escapeHtml(title)}</div>
+                        <div class="alert-details">${escapeHtml(details)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load active alerts
+        function loadAlertsPanel() {
+            const condition = encodeURIComponent('<?php echo $condition; ?>');
+            fetch('api/alerts_active.php?condition=' + condition)
+                .then(r => r.json())
+                .then(data => {
+                    const el = document.getElementById('alerts-panel-list');
+                    if (!el) return;
+                    if (!data.ok || !data.data || !data.data.length) {
+                        el.innerHTML = '<div class="alert-item info"><div class="alert-content">No active alerts.</div></div>';
+                        return;
+                    }
+                    el.innerHTML = data.data.map(renderAlertItem).join('');
+                })
+                .catch(() => {
+                    const el = document.getElementById('alerts-panel-list');
+                    if (el) el.innerHTML = '<div class="alert-item info"><div class="alert-content">Failed to load alerts.</div></div>';
+                });
+        }
         // Initial load
         document.addEventListener('DOMContentLoaded', function() {
             showNotification('Dashboard loaded successfully', 'success');
             loadActivityFeed();
             loadAlertsPanel();
+            // Auto-refresh panels periodically
+            setInterval(() => { try { loadActivityFeed(); } catch(e){} }, 15000);
+            setInterval(() => { try { loadAlertsPanel(); } catch(e){} }, 15000);
         });
         </script>
 </body>
