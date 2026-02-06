@@ -82,6 +82,26 @@ try {
                 </div>
             </div>
 
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="emergencyBroadcast()">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Emergency Broadcast</span>
+                </button>
+                <button class="quick-action-btn" onclick="lockdownProtocol()">
+                    <i class="fas fa-lock"></i>
+                    <span>Lockdown Protocol</span>
+                </button>
+                <button class="quick-action-btn" onclick="massCasualty()">
+                    <i class="fas fa-notes-medical"></i>
+                    <span>Mass Casualty</span>
+                </button>
+                <button class="quick-action-btn" onclick="resourceRequest()">
+                    <i class="fas fa-box"></i>
+                    <span>Resource Request</span>
+                </button>
+            </div>
+
             <!-- Main Dispatch Grid -->
             <div class="dispatch-grid">
                 <!-- Active Calls Panel -->

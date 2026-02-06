@@ -1,3 +1,13 @@
+-- Resolution proof storage
+CREATE TABLE IF NOT EXISTS `incident_proofs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `incident_id` INT NOT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_incident_proofs_incident` (`incident_id`),
+  CONSTRAINT `fk_incident_proofs_incident` FOREIGN KEY (`incident_id`) REFERENCES `incidents`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(150) NOT NULL,
@@ -193,6 +203,19 @@ CREATE TABLE IF NOT EXISTS `resources` (
   UNIQUE KEY `uk_resources_code` (`code`),
   KEY `idx_resources_type` (`type`),
   KEY `idx_resources_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Resource Requests (for ad-hoc resource needs captured from UI)
+CREATE TABLE IF NOT EXISTS `resource_requests` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `requestor` VARCHAR(150) NOT NULL,
+  `resource_name` VARCHAR(200) NOT NULL,
+  `date_requested` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` ENUM('pending','approved','rejected','fulfilled','cancelled') NOT NULL DEFAULT 'pending',
+  `details` TEXT NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_rr_status` (`status`),
+  KEY `idx_rr_date_requested` (`date_requested`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `staff` (

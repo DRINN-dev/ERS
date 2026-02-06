@@ -400,6 +400,21 @@ try {
                     color: #fff;
                 }
                 .request-action-btn:hover { background: #0056b3; }
+                .status-badge {
+                    display: inline-block;
+                    padding: 0.35em 0.8em;
+                    border-radius: 14px;
+                    font-weight: 600;
+                    font-size: 0.9em;
+                    color: #fff;
+                }
+                .status-pending { background: #6c757d; }
+                .status-approved { background: #28a745; }
+                .status-rejected { background: #dc3545; }
+                .btn-approve { background: #28a745; }
+                .btn-approve:hover { background: #1e7e34; }
+                .btn-reject { background: #dc3545; }
+                .btn-reject:hover { background: #bd2130; }
                 </style>
                 <table class="request-table">
                     <thead>
@@ -408,6 +423,7 @@ try {
                             <th>Type</th>
                             <th>Quantity</th>
                             <th>Location</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -423,19 +439,29 @@ try {
                                     $quantity = $details['quantity'] ?? '';
                                     $location = $details['location'] ?? '';
                                     $notes = $details['notes'] ?? '';
-                                    echo '<tr data-notes="' . htmlspecialchars($notes) . '">';
+                                    $status = $row['status'] ?? 'pending';
+                                    $decision = is_array($details) && isset($details['decision_reason']) ? $details['decision_reason'] : '';
+                                    $statusClass = 'status-badge status-' . htmlspecialchars($status);
+                                    echo '<tr data-id="' . (int)$row['id'] . '" data-notes="' . htmlspecialchars($notes) . '" data-decision-reason="' . htmlspecialchars($decision) . '" data-status="' . htmlspecialchars($status) . '">';
                                     echo '<td>' . htmlspecialchars($row['resource_name']) . '</td>';
                                     echo '<td>' . htmlspecialchars(ucfirst($type)) . '</td>';
                                     echo '<td>' . htmlspecialchars($quantity) . '</td>';
                                     echo '<td>' . htmlspecialchars($location) . '</td>';
-                                    echo '<td><button class="request-action-btn" onclick="viewRequestNotes(this)"><i class=\'fas fa-sticky-note\'></i> View Notes</button></td>';
+                                    echo '<td><span class="' . $statusClass . '">' . htmlspecialchars(ucfirst($status)) . '</span></td>';
+                                    echo '<td>';
+                                    echo '<button class="request-action-btn" onclick="viewRequestNotes(this)"><i class=\'fas fa-sticky-note\'></i> View Notes</button>';
+                                    if ($status === 'pending') {
+                                        echo ' <button class="request-action-btn btn-approve" onclick="approveRequest(this)"><i class=\'fas fa-check\'></i> Approve</button>';
+                                        echo ' <button class="request-action-btn btn-reject" onclick="rejectRequest(this)"><i class=\'fas fa-times\'></i> Reject</button>';
+                                    }
+                                    echo '</td>';
                                     echo '</tr>';
                                 }
                             } else {
-                                echo '<tr><td colspan="5" style="text-align:center;color:#888;">Unable to connect to database.</td></tr>';
+                                echo '<tr><td colspan="6" style="text-align:center;color:#888;">Unable to connect to database.</td></tr>';
                             }
                         } catch (Throwable $e) {
-                            echo '<tr><td colspan="5" style="text-align:center;color:#888;">Error loading requests.</td></tr>';
+                            echo '<tr><td colspan="6" style="text-align:center;color:#888;">Error loading requests.</td></tr>';
                         }
                         ?>
                     </tbody>
@@ -973,12 +999,19 @@ try {
             const tr = document.createElement('tr');
             const typeLabel = (row.resource_type || '').charAt(0).toUpperCase() + (row.resource_type || '').slice(1);
             tr.setAttribute('data-notes', row.notes || '');
+            tr.setAttribute('data-decision-reason', row.decision_reason || '');
+            tr.setAttribute('data-status', (row.status || 'pending'));
             tr.innerHTML = `
                 <td>${escapeHtml(row.resource_name || '')}</td>
                 <td>${escapeHtml(typeLabel)}</td>
                 <td>${escapeHtml(row.quantity || '')}</td>
                 <td>${escapeHtml(row.location || '')}</td>
-                <td><button class="request-action-btn" onclick="viewRequestNotes(this)"><i class='fas fa-sticky-note'></i> View Notes</button></td>
+                <td><span class="status-badge status-${escapeHtml((row.status||'pending'))}">${escapeHtml(((row.status||'pending')).charAt(0).toUpperCase() + (row.status||'pending').slice(1))}</span></td>
+                <td>
+                    <button class="request-action-btn" onclick="viewRequestNotes(this)"><i class='fas fa-sticky-note'></i> View Notes</button>
+                    <button class="request-action-btn btn-approve" onclick="approveRequest(this)"><i class='fas fa-check'></i> Approve</button>
+                    <button class="request-action-btn btn-reject" onclick="rejectRequest(this)"><i class='fas fa-times'></i> Reject</button>
+                </td>
             `;
             tbody.prepend(tr);
         }
@@ -986,13 +1019,81 @@ try {
         function viewRequestNotes(btn) {
             const tr = btn.closest('tr');
             const notes = tr ? tr.getAttribute('data-notes') : '';
+            const status = tr ? tr.getAttribute('data-status') : '';
+            const decision = tr ? tr.getAttribute('data-decision-reason') : '';
             const name = tr ? tr.children[0].textContent : 'Request';
             const modal = document.getElementById('requestNotesModal');
             const content = document.getElementById('requestNotesContent');
             if (modal && content) {
-                content.innerHTML = `<strong>${escapeHtml(name)}</strong><br>${notes ? escapeHtml(notes) : 'No notes provided.'}`;
+                let html = `<strong>${escapeHtml(name)}</strong>`;
+                if (status) { html += `<br>Status: ${escapeHtml(status.charAt(0).toUpperCase() + status.slice(1))}`; }
+                html += `<br>${notes ? 'Notes: ' + escapeHtml(notes) : 'No notes provided.'}`;
+                if (decision) { html += `<br>Decision Reason: ${escapeHtml(decision)}`; }
+                content.innerHTML = html;
                 modal.classList.add('show');
                 document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function approveRequest(btn) {
+            const tr = btn.closest('tr');
+            if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            const reason = prompt('Enter approval notes/reason (optional):', '');
+            const fd = new FormData();
+            fd.append('id', id || '');
+            fd.append('status', 'approved');
+            fd.append('reason', reason || '');
+            fetch('api/resource_request_update.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.success) {
+                        updateRequestRowUI(tr, 'approved', reason || '');
+                        showNotification('Request approved', 'success');
+                    } else {
+                        showNotification('Failed to approve: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
+                    }
+                })
+                .catch(err => { console.error(err); showNotification('Network error', 'error'); });
+        }
+
+        function rejectRequest(btn) {
+            const tr = btn.closest('tr');
+            if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            const reason = prompt('Enter rejection reason:', '');
+            if (reason === null) return; // cancelled
+            const fd = new FormData();
+            fd.append('id', id || '');
+            fd.append('status', 'rejected');
+            fd.append('reason', reason || '');
+            fetch('api/resource_request_update.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.success) {
+                        updateRequestRowUI(tr, 'rejected', reason || '');
+                        showNotification('Request rejected', 'error');
+                    } else {
+                        showNotification('Failed to reject: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
+                    }
+                })
+                .catch(err => { console.error(err); showNotification('Network error', 'error'); });
+        }
+
+        function updateRequestRowUI(tr, status, reason) {
+            tr.setAttribute('data-status', status);
+            tr.setAttribute('data-decision-reason', reason || '');
+            const statusCell = tr.children[4];
+            if (statusCell) {
+                statusCell.innerHTML = `<span class="status-badge status-${escapeHtml(status)}">${escapeHtml(status.charAt(0).toUpperCase() + status.slice(1))}</span>`;
+            }
+            // Remove approve/reject buttons
+            const actionCell = tr.children[5];
+            if (actionCell) {
+                const approveBtn = actionCell.querySelector('.btn-approve');
+                const rejectBtn = actionCell.querySelector('.btn-reject');
+                if (approveBtn) approveBtn.remove();
+                if (rejectBtn) rejectBtn.remove();
             }
         }
 
