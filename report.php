@@ -272,7 +272,7 @@ try {
                         <button class="btn-report" onclick="refreshChart()">
                             <i class="fas fa-sync"></i> Refresh
                         </button>
-                        <button class="btn-report" onclick="exportChart()">
+                        <button class="btn-report" onclick="exportChart('responseTimeChart')">
                             <i class="fas fa-download"></i> Export
                         </button>
                     </div>
@@ -290,7 +290,7 @@ try {
                         <button class="btn-report" onclick="toggleChartView()">
                             <i class="fas fa-pie-chart"></i> Toggle View
                         </button>
-                        <button class="btn-report" onclick="exportChart()">
+                        <button class="btn-report" onclick="exportChart('incidentsTypesChart')">
                             <i class="fas fa-download"></i> Export
                         </button>
                     </div>
@@ -318,7 +318,7 @@ try {
                         <button class="btn-report" onclick="window.open('api/reports_dispatch.php' + buildQuery(currentFilters), '_blank')"><i class="fas fa-file-pdf"></i> Open Full</button>
                     </div>
                 </div>
-                <div style="position: relative; width: 100%; height: 280px;">
+                <div style="position: relative; width: 100%; height: 320px;">
                     <canvas id="dispatchDailyChart" class="chart-canvas"></canvas>
                 </div>
             </div>
@@ -583,43 +583,168 @@ try {
             window.open('api/reports_trends.php' + qs, '_blank');
         }
 
-        // Chart functions
-        function refreshChart() {
-            showNotification('Refreshing chart data...', 'info');
-            setTimeout(() => {
-                showNotification('Chart data updated', 'success');
-            }, 1000);
+        // AI Insights
+        async function refreshAIInsights() {
+            try {
+                const container = document.getElementById('ai-insights-content');
+                if (container) {
+                    container.innerHTML = '<div class="ai-loading"><i class="fas fa-spinner"></i> Refreshing insights…</div>';
+                }
+                const res = await fetch('api/ai_recommendations.php');
+                const data = await res.json();
+                if (container) {
+                    if (data.ok && data.text) {
+                        container.innerHTML = '<div class="ai-insight-text">' + (data.text || '').replace(/\n/g,'<br>') + '</div>';
+                    } else {
+                        container.innerHTML = '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> Unable to generate AI insights at this time.</div>';
+                    }
+                }
+                showNotification('AI insights refreshed', 'success');
+            } catch (e) {
+                showNotification('Failed to refresh AI insights', 'error');
+            }
         }
 
-        function exportChart() {
-            showNotification('Exporting chart as image...', 'info');
-            setTimeout(() => {
+        // Chart functions
+        async function refreshChart() {
+            try {
+                showNotification('Refreshing chart data...', 'info');
+                await Promise.all([refreshMetrics(currentFilters), refreshCharts(currentFilters)]);
+                showNotification('Chart data updated', 'success');
+            } catch (e) {
+                showNotification('Failed to refresh charts', 'error');
+            }
+        }
+
+        function exportChart(chartId) {
+            try {
+                const canvas = document.getElementById(chartId);
+                if (!canvas) { showNotification('Chart not found', 'error'); return; }
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                const titleEl = canvas.closest('.chart-container')?.querySelector('.chart-title');
+                const title = titleEl ? titleEl.textContent.trim().replace(/\s+/g,'_').toLowerCase() : 'chart';
+                a.href = dataUrl;
+                a.download = `${title}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 showNotification('Chart exported successfully', 'success');
-            }, 1500);
+            } catch (e) {
+                showNotification('Failed to export chart', 'error');
+            }
         }
 
         function toggleChartView() {
-            showNotification('Switching chart view...', 'info');
-            setTimeout(() => {
+            try {
+                if (!typesChart) { showNotification('No chart to toggle', 'warning'); return; }
+                const currentType = typesChart.config.type;
+                const newType = currentType === 'doughnut' ? 'bar' : 'doughnut';
+                const labels = typesChart.data.labels.slice();
+                const data = typesChart.data.datasets[0].data.slice();
+                typesChart.destroy();
+                const ctx2 = document.getElementById('incidentsTypesChart');
+                typesChart = new Chart(ctx2, {
+                    type: newType,
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Incidents by Type',
+                            data,
+                            backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#22c55e'],
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: newType !== 'bar' } }, scales: newType === 'bar' ? { y: { beginAtZero: true } } : {} }
+                });
                 showNotification('Chart view updated', 'success');
-            }, 500);
+            } catch (e) {
+                showNotification('Failed to toggle chart view', 'error');
+            }
         }
 
-        // Incident details
-        function viewIncidentDetails(incidentId) {
-            const details = `Incident Details: ${incidentId}\n\n` +
-                          `• Type: Medical Emergency\n` +
-                          `• Location: Downtown District\n` +
-                          `• Priority: High\n` +
-                          `• Response Time: \n` +
-                          `• Units Dispatched: Ambulance, Police Unit\n` +
-                          `• Status: Resolved\n` +
-                          `• Outcome: Patient transported to hospital\n\n` +
-                          `View full incident log and timeline?`;
-
-            if (confirm(details)) {
-                showNotification(`Opening detailed view for ${incidentId}`, 'info');
+        // Incident details (fetch + modal)
+        async function viewIncidentDetails(id) {
+            try {
+                showNotification('Loading incident details...', 'info');
+                const res = await fetch('api/incident_details.php?id=' + encodeURIComponent(id));
+                const data = await res.json();
+                if (data && (data.incident || data.data)) {
+                    const inc = data.incident || data.data;
+                    showIncidentDetailsModal(inc);
+                } else {
+                    showNotification('Incident details not found', 'error');
+                }
+            } catch (e) {
+                showNotification('Failed to load incident details', 'error');
             }
+        }
+
+        function showIncidentDetailsModal(inc) {
+            const overlay = document.createElement('div');
+            overlay.className = 'incident-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'incident-modal';
+            const reference = (inc.reference_no || '').toString();
+            const title = (inc.title || '').toString();
+            const type = (inc.type || '').toString();
+            const location = (inc.location_address || '').toString();
+            const lat = inc.latitude != null ? inc.latitude : '';
+            const lng = inc.longitude != null ? inc.longitude : '';
+            const priority = (inc.priority || '').toString();
+            const status = (inc.status || '').toString();
+            const description = (inc.description || '') || '';
+            const created = (inc.created_at || '') || '';
+            const updated = (inc.updated_at || '') || '';
+            const resolved = (inc.resolved_at || '') || '';
+            const units = (inc.units || inc.dispatched_units || []);
+            const unitList = Array.isArray(units) ? units.map(u => (u.identifier || u.name || u)).join(', ') : (units || '');
+            modal.innerHTML = `
+                <div class="incident-modal-header">
+                    <h3>Incident Details</h3>
+                    <button class="incident-modal-close" aria-label="Close">&times;</button>
+                </div>
+                <div class="incident-modal-body">
+                    <div class="detail-row"><strong>Reference:</strong> <span>${reference || '—'}</span></div>
+                    <div class="detail-row"><strong>Title:</strong> <span>${title || '—'}</span></div>
+                    <div class="detail-row"><strong>Type:</strong> <span>${type || '—'}</span></div>
+                    <div class="detail-row"><strong>Location:</strong> <span>${location || '—'}${(lat!=='' && lng!=='') ? ` (lat: ${lat}, lng: ${lng})` : ''}</span></div>
+                    <div class="detail-row"><strong>Priority:</strong> <span>${priority ? priority.toUpperCase() : '—'}</span></div>
+                    <div class="detail-row"><strong>Status:</strong> <span class="status-badge ${status.includes('resolve') ? 'status-resolved' : (status.includes('dispatch')||status.includes('pending')) ? 'status-pending' : ''}">${status || '—'}</span></div>
+                    <div class="detail-row"><strong>Description:</strong> <span>${description || '—'}</span></div>
+                    <div class="detail-grid">
+                        <div><strong>Created:</strong><br><span>${created || '—'}</span></div>
+                        <div><strong>Updated:</strong><br><span>${updated || '—'}</span></div>
+                        <div><strong>Resolved:</strong><br><span>${resolved || '—'}</span></div>
+                    </div>
+                    <div class="detail-row"><strong>Units:</strong> <span>${unitList || '—'}</span></div>
+                </div>
+                <div class="incident-modal-footer">
+                    <button class="btn-report" id="incident-modal-close-btn"><i class="fas fa-times"></i> Close</button>
+                </div>
+            `;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            function closeModal(){ overlay.remove(); }
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+            modal.querySelector('.incident-modal-close').addEventListener('click', closeModal);
+            modal.querySelector('#incident-modal-close-btn').addEventListener('click', closeModal);
+            document.addEventListener('keydown', function escHandler(e){ if (e.key === 'Escape'){ closeModal(); document.removeEventListener('keydown', escHandler); } });
+            // Styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .incident-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+                .incident-modal { background: var(--card-bg-1); border-radius: 12px; width: 90%; max-width: 640px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+                .incident-modal-header { display:flex; justify-content: space-between; align-items:center; padding: 1rem 1.25rem; border-bottom: 1px solid #eee; }
+                .incident-modal-header h3 { margin:0; font-size:1.1rem; font-weight:700; color:#333; }
+                .incident-modal-close { background: transparent; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #666; }
+                .incident-modal-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+                .detail-row { display:flex; gap:0.5rem; }
+                .detail-row strong { width: 120px; color:#555; }
+                .detail-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:0.75rem; margin-top:0.5rem; }
+                .incident-modal-footer { padding: 1rem 1.25rem; border-top: 1px solid #eee; display:flex; justify-content:flex-end; }
+                @media (max-width: 480px) { .detail-row strong { width: 90px; } .detail-grid { grid-template-columns: 1fr; } }
+            `;
+            document.head.appendChild(style);
         }
 
         // Filter functions
@@ -918,16 +1043,47 @@ try {
                     const labels = dispData.daily?.labels || [];
                     const values = dispData.daily?.data || [];
                     const ctx4 = document.getElementById('dispatchDailyChart');
+                    const maxVal = values.length ? Math.max(...values) : 0;
                     if (ctx4) {
                         if (!dispatchDailyChart) {
                             dispatchDailyChart = new Chart(ctx4, {
-                                type: 'bar',
-                                data: { labels, datasets: [{ label: 'Dispatches per Day', data: values, backgroundColor: '#10b981' }] },
-                                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                                type: 'line',
+                                data: {
+                                    labels,
+                                    datasets: [{
+                                        label: 'Dispatches per Day',
+                                        data: values,
+                                        borderColor: '#3b82f6',
+                                        backgroundColor: 'rgba(59,130,246,0.15)',
+                                        tension: 0.3,
+                                        fill: false,
+                                        pointRadius: 3,
+                                        pointHoverRadius: 5,
+                                        spanGaps: true
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        x: {
+                                            grid: { display: true },
+                                            ticks: { maxRotation: 45, minRotation: 45 }
+                                        },
+                                        y: {
+                                            beginAtZero: true,
+                                            suggestedMax: Math.max(4, Math.ceil(maxVal * 1.2)),
+                                            grid: { display: true }
+                                        }
+                                    }
+                                }
                             });
                         } else {
                             dispatchDailyChart.data.labels = labels;
                             dispatchDailyChart.data.datasets[0].data = values;
+                            // Update suggestedMax dynamically on refresh
+                            dispatchDailyChart.options.scales.y.suggestedMax = Math.max(4, Math.ceil(maxVal * 1.2));
                             dispatchDailyChart.update();
                         }
                     }
@@ -1021,13 +1177,13 @@ try {
                 return (name||'').toLowerCase().replace(/\s+/g,'-').replace(/#/g,'').replace(/[^a-z0-9\-]/g,'');
             }
             tbody.innerHTML = items.slice(0, 10).map(i => {
+                const id = i.id;
                 const code = i.incident_code || '';
                 const type = labelForType(i.type);
                 const loc = i.location || '';
                 const pr = (i.priority || '').toUpperCase();
                 const status = (i.status || '').replace('_',' ');
                 const badgeClass = status.includes('resolve') ? 'status-resolved' : (status.includes('progress')||status.includes('dispatch')) ? 'status-pending' : (pr === 'CRITICAL' ? 'status-critical' : '');
-                const unitBtn = i.assigned_unit ? `<button class=\"btn-report\" onclick=\"navigateTo('gps.php', { unit: '${unitNameToParam(i.assigned_unit)}' })\"><i class=\"fas fa-location-arrow\"></i> Track</button>` : '';
                 return `
                 <tr>
                     <td>${code}</td>
@@ -1037,10 +1193,7 @@ try {
                     <td>${i.response_time_min != null ? i.response_time_min + ' min' : ''}</td>
                     <td><span class="status-badge ${badgeClass}">${status || ''}</span></td>
                     <td>
-                        <button class="btn-report" onclick="navigateTo('incident.php', { code: '${code}' })"><i class="fas fa-list"></i> Incident</button>
-                        <button class="btn-report" onclick="navigateTo('dispatch.php', { code: '${code}' })"><i class="fas fa-headset"></i> Dispatch</button>
-                        <button class="btn-report" onclick="navigateTo('resources.php', { tab: 'vehicles' })"><i class="fas fa-truck"></i> Resources</button>
-                        ${unitBtn}
+                        <button class="btn-report" onclick="viewIncidentDetails(${id})"><i class="fas fa-eye"></i> Details</button>
                     </td>
                 </tr>`;
             }).join('');
