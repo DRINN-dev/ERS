@@ -170,6 +170,21 @@ try {
                     background: #f7f7f7;
                     font-size: 1.13rem;
                 }
+                /* Make All Resources table vertically scrollable with fixed header */
+                .resource-table.scrollable thead, .resource-table.scrollable tbody { display: block; }
+                .resource-table.scrollable tbody { max-height: 380px; overflow-y: auto; }
+                .resource-table.scrollable thead tr, .resource-table.scrollable tbody tr { display: table; width: 100%; table-layout: fixed; }
+                /* Column widths: Type, Name/Description, Status, Location, Actions */
+                .resource-table.scrollable thead th:nth-child(1),
+                .resource-table.scrollable tbody td:nth-child(1) { width: 12%; }
+                .resource-table.scrollable thead th:nth-child(2),
+                .resource-table.scrollable tbody td:nth-child(2) { width: 36%; }
+                .resource-table.scrollable thead th:nth-child(3),
+                .resource-table.scrollable tbody td:nth-child(3) { width: 12%; }
+                .resource-table.scrollable thead th:nth-child(4),
+                .resource-table.scrollable tbody td:nth-child(4) { width: 20%; }
+                .resource-table.scrollable thead th:nth-child(5),
+                .resource-table.scrollable tbody td:nth-child(5) { width: 20%; }
                 .resource-table tr.resource-row-vehicle { background: #eafaf1; }
                 .resource-table tr.resource-row-personnel { background: #fffbe7; }
                 .resource-table tr.resource-row-equipment { background: #f9eaf6; }
@@ -177,57 +192,66 @@ try {
                     background: #d4edda;
                     color: #218838;
                     font-weight: 600;
-                    border-radius: 16px;
-                    padding: 0.3em 1em;
-                    font-size: 0.98em;
+                    border-radius: 12px;
+                    padding: 0.2em 0.6em;
+                    font-size: 0.9em;
+                    white-space: nowrap;
                     display: inline-block;
                 }
                 .resource-status-inuse {
                     background: #fff3cd;
                     color: #856404;
                     font-weight: 600;
-                    border-radius: 16px;
-                    padding: 0.3em 1em;
-                    font-size: 0.98em;
+                    border-radius: 12px;
+                    padding: 0.2em 0.6em;
+                    font-size: 0.9em;
+                    white-space: nowrap;
                     display: inline-block;
                 }
                 .resource-status-offline {
                     background: #f8d7da;
                     color: #721c24;
                     font-weight: 600;
-                    border-radius: 16px;
-                    padding: 0.3em 1em;
-                    font-size: 0.98em;
+                    border-radius: 12px;
+                    padding: 0.2em 0.6em;
+                    font-size: 0.9em;
+                    white-space: nowrap;
                     display: inline-block;
                 }
+                /* Truncate long text in Name/Description and Location */
+                td.resource-title, td.detail-value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .resource-action-btn {
                     border: none;
                     border-radius: 6px;
-                    padding: 0.5em 1.1em;
+                    width: 36px;
+                    height: 36px;
+                    padding: 0;
                     font-weight: 600;
                     margin-right: 0.3em;
-                    font-size: 0.98em;
+                    font-size: 16px; /* icon size */
                     cursor: pointer;
                     transition: background 0.2s, color 0.2s;
                     display: inline-flex;
                     align-items: center;
-                    gap: 0.4em;
+                    justify-content: center;
                     background: #fff;
                     color: #111;
                 }
+                .resource-action-btn i { margin: 0; }
                 .resource-action-btn:hover {
                     background: #111;
                     color: #fff;
                 }
+                /* Inline actions: show three buttons in a row */
+                .actions-inline { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; }
                 </style>
-                <table class="resource-table">
+                <table class="resource-table scrollable">
                     <thead>
                         <tr>
                             <th>Type</th>
                             <th>Name/Description</th>
                             <th>Status</th>
                             <th>Location</th>
-                            <th>Details</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -236,57 +260,20 @@ try {
                     </tbody>
                 </table>
                 <script>
-                // Resource data (should be fetched from backend in production)
-                let RESOURCES = [
-                    {
-                        type: 'vehicles',
-                        name: 'Ambulance #5',
-                        status: 'available',
-                        location: 'Station 1',
-                        details: 'Idle, Ready',
-                        icon: '<i class="fas fa-ambulance" style="color:#dc3545;"></i>',
-                        actions: ['deploy','track','service','details']
-                    },
-                    {
-                        type: 'vehicles',
-                        name: 'Police Unit #8',
-                        status: 'inuse',
-                        location: 'Downtown',
-                        details: 'En Route',
-                        icon: '<i class="fas fa-car" style="color:#007bff;"></i>',
-                        actions: ['deploy','track','service','details']
-                    },
-                    {
-                        type: 'personnel',
-                        name: 'Dr. Sarah Johnson',
-                        status: 'available',
-                        location: 'Station',
-                        details: 'Shift: Day<br>Level: Senior',
-                        icon: '<i class="fas fa-user-md" style="color:#28a745;"></i>',
-                        actions: ['contact','schedule','details'],
-                        role: 'Paramedic'
-                    },
-                    {
-                        type: 'personnel',
-                        name: 'Officer Mike Davis',
-                        status: 'inuse',
-                        location: 'Downtown Patrol',
-                        details: 'Shift: Night<br>Level: Veteran',
-                        icon: '<i class="fas fa-shield-alt" style="color:#ffc107;"></i>',
-                        actions: ['contact','schedule','details'],
-                        role: 'Police Officer'
-                    },
-                    {
-                        type: 'equipment',
-                        name: 'Defibrillator Unit',
-                        status: 'available',
-                        location: 'Ambulance',
-                        details: 'Charge: Full<br>Status: Calibrated',
-                        icon: '<i class="fas fa-heartbeat" style="color:#e83e8c;"></i>',
-                        actions: ['assign','check','calibrate','details'],
-                        role: 'Medical Equipment'
+                // Resource data loaded from backend
+                let RESOURCES = [];
+                async function loadResources() {
+                    const container = document.getElementById('resource-list-dynamic');
+                    if (container) container.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">Loading resources…</td></tr>';
+                    try {
+                        const res = await fetch('api/resources_combined.php');
+                        const data = await res.json();
+                        RESOURCES = (data.ok && Array.isArray(data.items)) ? data.items : [];
+                        renderDynamicResources();
+                    } catch (e) {
+                        if (container) container.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">Failed to load resources</td></tr>';
                     }
-                ];
+                }
 
                 // Filter elements
                 const typeFilter = document.getElementById('resource-type');
@@ -304,7 +291,7 @@ try {
                     if (statusValue && (r.status || '').toLowerCase() !== statusValue) return false;
                     if (locationValue && (r.location || '').toLowerCase() !== locationValue) return false;
                     if (searchValue) {
-                        const hay = [r.name, r.details, r.location, r.role]
+                        const hay = [r.name, r.location, r.role]
                             .map(v => (v || '').toString().toLowerCase()).join(' ');
                         if (!hay.includes(searchValue)) return false;
                     }
@@ -314,23 +301,30 @@ try {
                 function resourceRowHtml(r) {
                     let rowClass = r.type === 'vehicles' ? 'resource-row-vehicle' : (r.type === 'personnel' ? 'resource-row-personnel' : 'resource-row-equipment');
                     let statusClass = r.status === 'available' ? 'resource-status-available' : (r.status === 'inuse' ? 'resource-status-inuse' : 'resource-status-offline');
-                    let statusLabel = r.status === 'available' ? 'Available' : (r.status === 'inuse' ? 'In Use' : 'Offline');
-                    let actionsHtml = '';
-                    if (r.actions.includes('deploy')) actionsHtml += `<button class=\"resource-action-btn deploy\" onclick=\"deployResource(this)\"><i class=\"fas fa-play\"></i> Deploy</button>`;
-                    if (r.actions.includes('track')) actionsHtml += `<button class=\"resource-action-btn track\" onclick=\"trackResource(this)\"><i class=\"fas fa-location-arrow\"></i> Track</button>`;
-                    if (r.actions.includes('service')) actionsHtml += `<button class=\"resource-action-btn service\" onclick=\"serviceResource(this)\"><i class=\"fas fa-wrench\"></i> Service</button>`;
-                    if (r.actions.includes('details')) actionsHtml += `<button class=\"resource-action-btn details\" onclick=\"resourceDetails(this)\"><i class=\"fas fa-info-circle\"></i> Details</button>`;
-                    if (r.actions.includes('contact')) actionsHtml += `<button class=\"resource-action-btn contact\" onclick=\"contactPersonnel(this)\"><i class=\"fas fa-phone\"></i> Contact</button>`;
-                    if (r.actions.includes('schedule')) actionsHtml += `<form style=\"display:inline;\" onsubmit=\"event.preventDefault(); openScheduleModal('${r.name}');\"><button type=\"submit\" class=\"resource-action-btn schedule\"><i class=\"fas fa-calendar\"></i> Schedule</button></form>`;
-                    if (r.actions.includes('assign')) actionsHtml += `<button class=\"resource-action-btn assign\" onclick=\"assignEquipment(this)\"><i class=\"fas fa-link\"></i> Assign</button>`;
-                    if (r.actions.includes('check')) actionsHtml += `<button class=\"resource-action-btn check\" onclick=\"checkEquipment(this)\"><i class=\"fas fa-check-circle\"></i> Check</button>`;
-                    if (r.actions.includes('calibrate')) actionsHtml += `<button class=\"resource-action-btn calibrate\" onclick=\"calibrateEquipment(this)\"><i class=\"fas fa-tools\"></i> Calibrate</button>`;
-                    return `<tr class=\"${rowClass}\" data-type=\"${r.type}\" data-status=\"${r.status}\" data-location=\"${r.location}\">\n`+
-                        `<td>${r.icon} ${r.type.charAt(0).toUpperCase() + r.type.slice(1)}</td>`+
+                    let statusLabel = r.status === 'available' ? 'Avail' : (r.status === 'inuse' ? 'Busy' : 'Offline');
+                    // Build actions and render first three inline
+                    const btns = [];
+                    if (r.actions.includes('deploy')) btns.push(`<button class=\"resource-action-btn deploy\" title=\"Deploy\" aria-label=\"Deploy\" onclick=\"deployResource(this)\"><i class=\"fas fa-play\"></i></button>`);
+                    if (r.actions.includes('track')) btns.push(`<button class=\"resource-action-btn track\" title=\"Track\" aria-label=\"Track\" onclick=\"trackResource(this)\"><i class=\"fas fa-location-arrow\"></i></button>`);
+                    if (r.actions.includes('service')) btns.push(`<button class=\"resource-action-btn service\" title=\"Service\" aria-label=\"Service\" onclick=\"serviceResource(this)\"><i class=\"fas fa-wrench\"></i></button>`);
+                    if (r.actions.includes('details')) btns.push(`<button class=\"resource-action-btn details\" title=\"Details\" aria-label=\"Details\" onclick=\"resourceDetails(this)\"><i class=\"fas fa-info-circle\"></i></button>`);
+                    if (r.actions.includes('contact')) btns.push(`<button class=\"resource-action-btn contact\" title=\"Contact\" aria-label=\"Contact\" onclick=\"contactPersonnel(this)\"><i class=\"fas fa-phone\"></i></button>`);
+                    if (r.actions.includes('schedule')) btns.push(`<form style=\"display:inline;\" onsubmit=\"event.preventDefault(); openScheduleModal('${r.name}');\"><button type=\"submit\" class=\"resource-action-btn schedule\" title=\"Schedule\" aria-label=\"Schedule\"><i class=\"fas fa-calendar\"></i></button></form>`);
+                    if (r.actions.includes('assign')) btns.push(`<button class=\"resource-action-btn assign\" title=\"Assign\" aria-label=\"Assign\" onclick=\"assignEquipment(this)\"><i class=\"fas fa-link\"></i></button>`);
+                    if (r.actions.includes('check')) btns.push(`<button class=\"resource-action-btn check\" title=\"Check\" aria-label=\"Check\" onclick=\"checkEquipment(this)\"><i class=\"fas fa-check-circle\"></i></button>`);
+                    if (r.actions.includes('calibrate')) btns.push(`<button class=\"resource-action-btn calibrate\" title=\"Calibrate\" aria-label=\"Calibrate\" onclick=\"calibrateEquipment(this)\"><i class=\"fas fa-tools\"></i></button>`);
+                    const visibleBtns = btns.slice(0, 3);
+                    const actionsHtml = `<div class=\"actions-inline\">${visibleBtns.join('')}</div>`;
+                    // Icon by type
+                    let iconHtml = '';
+                    if (r.type === 'vehicles') iconHtml = '<i class="fas fa-truck-medical" style="color:#dc3545;"></i>';
+                    else if (r.type === 'personnel') iconHtml = '<i class="fas fa-user" style="color:#28a745;"></i>';
+                    else iconHtml = '<i class="fas fa-toolbox" style="color:#e83e8c;"></i>';
+                    return `<tr class=\"${rowClass}\" data-type=\"${r.type}\" data-status=\"${r.status}\" data-location=\"${r.location || ''}\">\n`+
+                        `<td>${iconHtml} ${r.type.charAt(0).toUpperCase() + r.type.slice(1)}</td>`+
                         `<td class=\"resource-title\">${r.name}${r.role ? ' <br><span style=\\"font-size:0.95em;color:#888;\\">'+r.role+'</span>' : ''}</td>`+
                         `<td><span class=\"${statusClass}\">${statusLabel}</span></td>`+
-                        `<td class=\"detail-value\">${r.location}</td>`+
-                        `<td>${r.details}</td>`+
+                        `<td class=\"detail-value\">${r.location || ''}</td>`+
                         `<td>${actionsHtml}</td>`+
                     `</tr>`;
                 }
@@ -346,19 +340,19 @@ try {
                     }
                 }
 
-                function applyFilters() {
+                function applyTableFilters() {
                     renderDynamicResources();
                 }
 
                 // Add event listeners to filters
-                typeFilter.addEventListener('change', applyFilters);
-                statusFilter.addEventListener('change', applyFilters);
-                locationFilter.addEventListener('change', applyFilters);
-                searchInput.addEventListener('input', applyFilters);
+                typeFilter.addEventListener('change', applyTableFilters);
+                statusFilter.addEventListener('change', applyTableFilters);
+                locationFilter.addEventListener('change', applyTableFilters);
+                searchInput.addEventListener('input', applyTableFilters);
 
                 // Initial render
                 document.addEventListener('DOMContentLoaded', function() {
-                    renderDynamicResources();
+                    loadResources();
                 });
                 </script>
             </div>

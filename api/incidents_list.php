@@ -21,10 +21,12 @@ $month = isset($_GET['month']) ? trim((string)$_GET['month']) : ''; // YYYY-MM
 
 $sql = 'SELECT i.id, i.reference_no, i.type, i.priority, i.status, i.location_address, i.description, i.created_at,
         u.identifier AS unit_identifier, u.unit_type AS unit_type,
-        c.caller_name AS caller_name, c.caller_phone AS caller_phone, i.title AS title
+        c.caller_name AS caller_name, c.caller_phone AS caller_phone, i.title AS title,
+        CASE WHEN ld.assigned_at IS NOT NULL AND ld.on_scene_at IS NOT NULL 
+             THEN TIMESTAMPDIFF(MINUTE, ld.assigned_at, ld.on_scene_at) ELSE NULL END AS response_time_min
         FROM incidents i
         LEFT JOIN (
-            SELECT d1.incident_id, d1.unit_id
+            SELECT d1.incident_id, d1.unit_id, d1.assigned_at, d1.on_scene_at
             FROM dispatches d1
             INNER JOIN (
                 SELECT incident_id, MAX(assigned_at) AS max_assigned_at
@@ -100,6 +102,7 @@ try {
             'assigned_unit_type' => $r['unit_type'] ?? null,
             'caller_name' => $r['caller_name'] ?? null,
             'caller_phone' => $r['caller_phone'] ?? null,
+            'response_time_min' => isset($r['response_time_min']) ? (int)$r['response_time_min'] : null,
         ];
     }, $rows);
     echo json_encode(['ok' => true, 'items' => $items]);

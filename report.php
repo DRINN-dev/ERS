@@ -351,7 +351,7 @@ try {
                     <h3 class="table-title">Recent Incidents</h3>
                 </div>
                 <div class="table-container">
-                    <table class="analytics-table">
+                    <table class="analytics-table scrollable">
                         <thead>
                             <tr>
                                 <th>Incident ID</th>
@@ -539,6 +539,13 @@ try {
             if (startDate) filters.start = startDate;
             if (endDate) filters.end = endDate;
             return filters;
+        }
+
+        function isValidDateRange(start, end) {
+            if (!start || !end) return true;
+            const s = new Date(start);
+            const e = new Date(end);
+            return s <= e;
         }
 
         // Report generation functions
@@ -749,6 +756,12 @@ try {
 
         // Filter functions
         function applyFilters() {
+            const startDate = document.getElementById('start-date')?.value || '';
+            const endDate = document.getElementById('end-date')?.value || '';
+            if (!isValidDateRange(startDate, endDate)) {
+                showNotification('End date must be on/after start date', 'error');
+                return;
+            }
             currentFilters = getFilters();
             showNotification('Applying filters to reports...', 'info');
             refreshMetrics(currentFilters);
@@ -917,6 +930,13 @@ try {
                 background-color: #f8f9fa;
             }
             .chart-canvas { width: 100% !important; height: 100% !important; display: block; }
+            .chart-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background: rgba(255,255,255,0.7); color:#374151; font-weight:600; gap:8px; z-index:5; border-radius:10px; }
+            .chart-spinner { width:22px; height:22px; border:3px solid #cfe0ff; border-top-color:#3b82f6; border-radius:50%; animation: spin 0.8s linear infinite; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            /* Scrollable Recent Incidents table with fixed header */
+            .analytics-table.scrollable thead, .analytics-table.scrollable tbody { display: block; }
+            .analytics-table.scrollable tbody { max-height: 360px; overflow-y: auto; }
+            .analytics-table.scrollable thead tr, .analytics-table.scrollable tbody tr { display: table; width: 100%; table-layout: fixed; }
         `;
         document.head.appendChild(style);
         // Charts
@@ -925,8 +945,29 @@ try {
         let callDurationChart = null;
         let dispatchDailyChart = null;
 
+        function setChartLoading(chartId, isLoading) {
+            const canvas = document.getElementById(chartId);
+            const container = canvas ? canvas.closest('.chart-container') : null;
+            if (!container) return;
+            let overlay = container.querySelector('.chart-loading');
+            if (isLoading) {
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'chart-loading';
+                    overlay.innerHTML = '<div class="chart-spinner"></div><div>Loading…</div>';
+                    container.appendChild(overlay);
+                }
+            } else if (overlay) {
+                overlay.remove();
+            }
+        }
+
         async function refreshCharts(filters = {}) {
             try {
+                setChartLoading('responseTimeChart', true);
+                setChartLoading('incidentsTypesChart', true);
+                setChartLoading('callDurationChart', true);
+                setChartLoading('dispatchDailyChart', true);
                 const qs = buildQuery(filters);
                 const [respRes, metricsRes] = await Promise.all([
                     fetch('api/report_response_times_daily.php' + qs),
@@ -973,9 +1014,10 @@ try {
                         typeCounts.police || 0,
                         typeCounts.traffic || 0,
                     ];
-                    if (filters.incident_type) {
+                    // Apply incident type filter if present
+                    if (filters.type) {
                         const map = { medical: 'Medical', fire: 'Fire', police: 'Police', traffic: 'Traffic', accident: 'Traffic', crime: 'Police' };
-                        const wanted = map[filters.incident_type] || filters.incident_type;
+                        const wanted = map[filters.type] || filters.type;
                         const idx = labels.indexOf(wanted);
                         if (idx >= 0) { labels = [labels[idx]]; values = [values[idx]]; } else { labels = []; values = []; }
                     }
@@ -1089,6 +1131,12 @@ try {
                     }
                 }
             } catch (e) { /* silent */ }
+            finally {
+                setChartLoading('responseTimeChart', false);
+                setChartLoading('incidentsTypesChart', false);
+                setChartLoading('callDurationChart', false);
+                setChartLoading('dispatchDailyChart', false);
+            }
         }
 
         async function refreshMetrics(filters = {}) {
@@ -1110,6 +1158,40 @@ try {
                 if (deltaEl) deltaEl.textContent = Math.max(0, (m.total_incidents_month ?? 0) - (m.total_incidents_last_month ?? 0));
                 if (utilEl) utilEl.textContent = ((m.resource_utilization ?? 0)).toFixed(1) + '%';
                 if (successEl) successEl.textContent = ((m.success_rate ?? 0)).toFixed(1) + '%';
+
+                // Populate Performance Metrics table current values and targets
+                const perfTable = document.querySelector('.data-table .table-title')?.textContent?.includes('Performance Metrics')
+                    ? document.querySelector('.data-table:nth-of-type(3) table tbody')
+                    : document.querySelectorAll('.data-table table tbody')[2];
+                if (perfTable) {
+                    const rows = perfTable.querySelectorAll('tr');
+                    if (rows[0]) { // Average Response Time
+                        const cells = rows[0].querySelectorAll('td');
+                        if (cells[1]) cells[1].textContent = `${(m.avg_response_time_min ?? 0).toFixed(1)} min`;
+                        if (cells[2]) cells[2].textContent = '< 10 min';
+                    }
+                    if (rows[1]) { // Incident Resolution Rate
+                        const cells = rows[1].querySelectorAll('td');
+                        if (cells[1]) cells[1].textContent = `${(m.success_rate ?? 0).toFixed(1)}%`;
+                        if (cells[2]) cells[2].textContent = '≥ 95%';
+                    }
+                    if (rows[2]) { // Resource Utilization
+                        const cells = rows[2].querySelectorAll('td');
+                        if (cells[1]) cells[1].textContent = `${(m.resource_utilization ?? 0).toFixed(1)}%`;
+                        if (cells[2]) cells[2].textContent = '70–85%';
+                    }
+                    // Rows 3-4: Equipment Downtime & Personnel Overtime not tracked
+                    if (rows[3]) {
+                        const cells = rows[3].querySelectorAll('td');
+                        if (cells[1]) cells[1].textContent = '—';
+                        if (cells[2]) cells[2].textContent = 'Minimize';
+                    }
+                    if (rows[4]) {
+                        const cells = rows[4].querySelectorAll('td');
+                        if (cells[1]) cells[1].textContent = '—';
+                        if (cells[2]) cells[2].textContent = '≤ 10%';
+                    }
+                }
                 // Dispatch metrics
                 const dispRes = await fetch('api/reports_dispatch.php' + qs);
                 const disp = await dispRes.json();
@@ -1144,6 +1226,8 @@ try {
 
         async function loadRecentIncidents(filters = {}) {
             try {
+                const tbody = document.getElementById('recentIncidentsBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="color:#6b7280">Loading incidents…</td></tr>';
                 const extra = periodToParams(filters.period || '');
                 const qs = buildQuery(extra);
                 const res = await fetch('api/incidents_list.php' + qs);
