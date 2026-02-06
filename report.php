@@ -264,6 +264,7 @@ try {
             </div>
 
             <!-- Charts Section -->
+            <div class="charts-grid">
             <div class="chart-container">
                 <div class="chart-header">
                     <h3 class="chart-title">Incident Response Times</h3>
@@ -309,7 +310,6 @@ try {
                 </div>
             </div>
 
-            <!-- Dispatch Report -->
             <div class="chart-container">
                 <div class="chart-header">
                     <h3 class="chart-title">Dispatch Report</h3>
@@ -318,31 +318,10 @@ try {
                         <button class="btn-report" onclick="window.open('api/reports_dispatch.php' + buildQuery(currentFilters), '_blank')"><i class="fas fa-file-pdf"></i> Open Full</button>
                     </div>
                 </div>
-                <div class="analytics-grid">
-                    <div class="analytics-card response-time">
-                        <div class="metric-label">Total Dispatches</div>
-                        <div class="metric-display"><div class="metric-value" id="dispTotal">0</div><div class="metric-change neutral"><i class="fas fa-minus"></i></div></div>
-                        <div style="color:#666;font-size:0.9rem">Period filter applies</div>
-                    </div>
-                    <div class="analytics-card incidents">
-                        <div class="metric-label">Avg Time to Acknowledge</div>
-                        <div class="metric-display"><div class="metric-value" id="dispAck">0.0</div><div class="metric-change positive"><i class="fas fa-arrow-down"></i></div></div>
-                        <div style="color:#666;font-size:0.9rem">Target: &lt; 2m</div>
-                    </div>
-                    <div class="analytics-card resources">
-                        <div class="metric-label">Avg Time to On Scene</div>
-                        <div class="metric-display"><div class="metric-value" id="dispOnScene">0.0</div><div class="metric-change positive"><i class="fas fa-arrow-down"></i></div></div>
-                        <div style="color:#666;font-size:0.9rem">Target: &lt; 15m</div>
-                    </div>
-                    <div class="analytics-card performance">
-                        <div class="metric-label">SLA Breach Rate</div>
-                        <div class="metric-display"><div class="metric-value" id="dispBreach">0.0%</div><div class="metric-change neutral"><i class="fas fa-minus"></i></div></div>
-                        <div style="color:#666;font-size:0.9rem">Threshold: 15m to on-scene</div>
-                    </div>
-                </div>
                 <div style="position: relative; width: 100%; height: 280px;">
                     <canvas id="dispatchDailyChart" class="chart-canvas"></canvas>
                 </div>
+            </div>
             </div>
 
             <!-- Dispatch Breakdown Table -->
@@ -862,19 +841,18 @@ try {
                 }
                 if (metricsData.ok) {
                     const typeCounts = metricsData.metrics?.incidents_by_type || {};
-                    let labels = ['Medical','Fire','Police','Traffic','Other'];
+                    let labels = ['Medical','Fire','Police','Traffic'];
                     let values = [
                         typeCounts.medical || 0,
                         typeCounts.fire || 0,
                         typeCounts.police || 0,
                         typeCounts.traffic || 0,
-                        typeCounts.other || 0,
                     ];
                     if (filters.incident_type) {
-                        const map = { medical: 'Medical', fire: 'Fire', police: 'Police', traffic: 'Traffic', accident: 'Traffic', crime: 'Police', other: 'Other' };
+                        const map = { medical: 'Medical', fire: 'Fire', police: 'Police', traffic: 'Traffic', accident: 'Traffic', crime: 'Police' };
                         const wanted = map[filters.incident_type] || filters.incident_type;
                         const idx = labels.indexOf(wanted);
-                        if (idx >= 0) { labels = [labels[idx]]; values = [values[idx]]; }
+                        if (idx >= 0) { labels = [labels[idx]]; values = [values[idx]]; } else { labels = []; values = []; }
                     }
                     const ctx2 = document.getElementById('incidentsTypesChart');
                     if (ctx2) {
@@ -886,7 +864,7 @@ try {
                                     datasets: [{
                                         label: 'Incidents by Type',
                                         data: values,
-                                        backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#22c55e','#6b7280'],
+                                        backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#22c55e'],
                                     }]
                                 },
                                 options: { responsive: true, maintainAspectRatio: false }
@@ -902,8 +880,10 @@ try {
                 const callRes = await fetch('api/report_call_duration.php');
                 const callData = await callRes.json();
                 if (callData.ok) {
-                    const labels = callData.data.map(x => x.type);
-                    const values = callData.data.map(x => x.avg_duration);
+                    const raw = Array.isArray(callData.data) ? callData.data : [];
+                    const filtered = raw.filter(x => ((x.type || '').toLowerCase() !== 'other'));
+                    const labels = filtered.map(x => x.type);
+                    const values = filtered.map(x => x.avg_duration);
                     const ctx3 = document.getElementById('callDurationChart');
                     if (ctx3) {
                         if (!callDurationChart) {

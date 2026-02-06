@@ -239,6 +239,15 @@
             }
         }
 
+        /* Mobile overrides */
+        @media (max-width: 767px) {
+            .unit-info, .call-info { flex-direction: column; gap: 0.5rem; }
+            .unit-meta, .call-meta { flex-wrap: wrap; }
+            .unit-actions, .call-actions { flex-direction: column; }
+            .btn-dispatch, .btn-action-small { width: 100%; }
+            .alert-panel { flex-direction: column; gap: 1rem; }
+        }
+
 /* AI Recommendations Styles */
 .ai-recommendations-section {
     margin-top: 2rem;

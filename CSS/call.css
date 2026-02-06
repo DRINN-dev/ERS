@@ -94,6 +94,19 @@
         .priority-option.medium.active { background: #3b82f6; }
         .priority-option.low.active { background: #10b981; }
 
+        /* Mobile responsiveness */
+        @media (max-width: 767px) {
+            .main-content { margin-left: 0; padding: 15px; margin-top: 60px; }
+            .call-center-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; gap: 12px; }
+            .priority-select { flex-wrap: wrap; }
+            .priority-option { flex: 1 1 48%; }
+            .call-actions { flex-direction: column; }
+            .call-btn { width: 100%; }
+            .incoming-call-alert { padding: 20px; }
+            .caller-details h2 { font-size: 20px; }
+        }
+
         .submit-incident-btn {
             width: 100%;
             padding: 16px;

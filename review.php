@@ -37,6 +37,7 @@ $pageTitle = 'Emergency Call Center';
                 <div class="filter-group">
                     <label for="statusFilter">Status</label>
                     <select id="statusFilter">
+                        <option value="all">All</option>
                         <option value="resolved">Resolved / Cancelled</option>
                         <option value="dispatched" selected>Dispatched</option>
                         <option value="active">Active</option>

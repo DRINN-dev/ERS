@@ -82,6 +82,15 @@
 	.card-grid { grid-template-columns: 1fr; }
 }
 
+/* Mobile-friendly filter layout */
+@media (max-width: 767px) {
+	.filters { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+	.filters .filter-group { width: 100%; }
+	.filters .filter-group.search { width: 100%; }
+	.filters .filter-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+	.filters .filter-actions .btn { width: 100%; justify-content: center; }
+}
+
 /* Override global cards.css wide-screen layout specifically for Review page */
 @media (min-width: 1201px) {
 	.main-content .main-container #incidentsContainer.card-grid {

@@ -53,7 +53,8 @@
   function buildQuery(){
     const params = new URLSearchParams();
     const status = statusFilter.value || '';
-    if (status) params.set('status', status);
+    // If status is 'all', omit the filter to fetch all incidents
+    if (status && status !== 'all') params.set('status', status);
     const day = dayFilter.value || '';
     if (day) params.set('day', day);
     const search = searchInput.value.trim();

@@ -371,6 +371,10 @@
                 border-right: none;
                 border-bottom: 1px solid #dee2e6;
             }
+            .resource-details { grid-template-columns: 1fr; }
+            .resource-actions { flex-direction: column; }
+            .btn-resource { width: 100%; }
+            .maintenance-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
         }
 
 /* AI Predictive Analytics Styles */

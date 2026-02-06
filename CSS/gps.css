@@ -396,3 +396,12 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Mobile overrides */
+        @media (max-width: 767px) {
+            .map-container { height: 60vh; }
+            .map-controls { justify-content: stretch; }
+            .map-btn { flex: 1 1 48%; }
+            .unit-details { grid-template-columns: 1fr; }
+            .btn-unit { width: 100%; }
+        }

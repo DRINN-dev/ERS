@@ -5,6 +5,13 @@
             margin-bottom: 2rem;
         }
 
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
         .analytics-card {
             background: var(--card-bg-1);
             border-radius: 12px;
@@ -398,6 +405,9 @@
             .analytics-grid {
                 grid-template-columns: 1fr;
             }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
 
             .quick-reports {
                 grid-template-columns: 1fr;
@@ -410,6 +420,8 @@
             .export-options {
                 grid-template-columns: repeat(2, 1fr);
             }
+            .chart-controls { flex-wrap: wrap; }
+            .btn-report { width: 100%; }
         }
 
 /* AI Insights Styles */

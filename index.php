@@ -26,7 +26,7 @@ if ($data && $data['cod'] == 200) {
     $visibility = "--";
 }
 $pageTitle = 'ERS Admin Dashboard';
-$typesCounts = ['medical'=>0,'fire'=>0,'police'=>0,'traffic'=>0,'other'=>0];
+$typesCounts = ['medical'=>0,'fire'=>0,'police'=>0,'traffic'=>0];
 $priorityCounts = ['high'=>0,'medium'=>0,'low'=>0];
 try {
     require_once __DIR__ . '/includes/db.php';
@@ -52,7 +52,7 @@ try {
     $availableResponders = (int)$pdo->query("SELECT COUNT(*) AS c FROM units WHERE status='available'")->fetch()['c'];
     $totalIncidents = (int)$pdo->query("SELECT COUNT(*) AS c FROM incidents WHERE YEAR(created_at)=YEAR(CURDATE()) AND MONTH(created_at)=MONTH(CURDATE())")->fetch()['c'];
     // Charts
-    $typesCounts = ['medical'=>0,'fire'=>0,'police'=>0,'traffic'=>0,'other'=>0];
+    $typesCounts = ['medical'=>0,'fire'=>0,'police'=>0,'traffic'=>0];
     $priorityCounts = ['high'=>0,'medium'=>0,'low'=>0];
     $q1 = $pdo->query("SELECT type, COUNT(*) AS c FROM incidents GROUP BY type");
     foreach ($q1->fetchAll() as $r) { if (isset($typesCounts[$r['type']])) { $typesCounts[$r['type']] = (int)$r['c']; } }
@@ -311,8 +311,13 @@ try {
 
     <script>
         // Charts data from PHP
-        const typesLabels = ['Medical','Fire','Police','Traffic','Other'];
-        const typesValues = <?php echo json_encode(array_values($typesCounts)); ?>;
+        const typesLabels = ['Medical','Fire','Police','Traffic'];
+        const typesValues = <?php echo json_encode([
+            $typesCounts['medical'] ?? 0,
+            $typesCounts['fire'] ?? 0,
+            $typesCounts['police'] ?? 0,
+            $typesCounts['traffic'] ?? 0,
+        ]); ?>;
         const priorityLabels = ['High','Medium','Low'];
         const priorityValues = <?php echo json_encode(array_values($priorityCounts)); ?>;
 
@@ -327,7 +332,7 @@ try {
                         datasets: [{
                             label: 'Incidents by Type',
                             data: typesValues,
-                            backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#22c55e','#6b7280'],
+                            backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#22c55e'],
                         }]
                     },
                     options: {
@@ -533,8 +538,8 @@ try {
             const totalIncidents = getMetric('.metric-card.info .metric-value');
 
             // Chart data
-            const labels = ['Medical','Fire','Police','Traffic','Other'];
-            const values = (typeof typesValues !== 'undefined') ? typesValues : [0,0,0,0,0];
+            const labels = ['Medical','Fire','Police','Traffic'];
+            const values = (typeof typesValues !== 'undefined') ? typesValues : [0,0,0,0];
 
             // Build summary HTML
             let printContent = `
