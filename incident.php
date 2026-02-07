@@ -17,7 +17,6 @@ $pageTitle = 'Incident Priority Management';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/admin-header.css">
-    <link rel="stylesheet" href="css/buttons.css">
     <link rel="stylesheet" href="css/sidebar-footer.css">
     <link rel="stylesheet" href="CSS/cards.css">
     <link rel="stylesheet" href="css/incident.css">
@@ -343,23 +342,13 @@ $pageTitle = 'Incident Priority Management';
 
         // AI refresh for incident analysis
         function refreshAIAnalysis() {
-            const payload = {
-                type: 'General',
-                location: 'Unknown',
-                description: 'Summarize current incident list and provide recommendations',
-                severity: 'Variable'
-            };
             const container = document.getElementById('ai-analysis-content');
             container.innerHTML = '<div class="ai-loading"><i class="fas fa-spinner"></i> Generating analysis...</div>';
-            fetch('api/ai.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'analyze_incident', payload })
-            })
+            fetch('api/ai_recommendations.php')
             .then(r => r.json())
             .then(json => {
                 if (json.ok && json.text) {
-                    container.innerHTML = '<div class="ai-analysis-text">' + json.text.replace(/\n/g,'<br>') + '</div>';
+                    container.innerHTML = '<div class="ai-analysis-text">' + String(json.text).replace(/\n/g,'<br>') + '</div>';
                 } else {
                     container.innerHTML = '<div class="ai-error"><i class="fas fa-exclamation-triangle"></i> Unable to generate AI analysis at this time.</div>';
                 }

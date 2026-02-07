@@ -76,7 +76,6 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/admin-header.css">
-    <link rel="stylesheet" href="css/buttons.css">
     <link rel="stylesheet" href="css/sidebar-footer.css">
     <link rel="stylesheet" href="CSS/cards.css">
     <link rel="stylesheet" href="CSS/dashboard.css">
@@ -310,6 +309,41 @@ try {
     <?php /* include('includes/admin-footer.php') */ ?>
 
     <script>
+        // Lightweight notification helper used across dashboard
+        function showNotification(message, type) {
+            const kinds = { success: '#16a34a', info: '#2563eb', warning: '#f59e0b', error: '#ef4444' };
+            const color = kinds[type] || kinds.info;
+            let container = document.getElementById('ers-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'ers-toast-container';
+                container.style.position = 'fixed';
+                container.style.top = '16px';
+                container.style.right = '16px';
+                container.style.zIndex = '10000';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.gap = '8px';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.background = '#fff';
+            toast.style.border = '1px solid ' + color;
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+            toast.style.color = '#111';
+            toast.style.padding = '10px 12px';
+            toast.style.borderRadius = '8px';
+            toast.style.minWidth = '220px';
+            toast.style.fontSize = '14px';
+            toast.style.fontWeight = '600';
+            toast.style.borderLeft = '6px solid ' + color;
+            toast.style.pointerEvents = 'auto';
+            toast.style.transition = 'opacity 0.25s ease';
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+            setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2800);
+        }
         // Charts data from PHP
         const typesLabels = ['Medical','Fire','Police','Traffic'];
         const typesValues = <?php echo json_encode([
@@ -503,10 +537,15 @@ try {
                     });
                 });
         }
-        document.getElementById('trendFilterForm').onsubmit = function(e) {
-            e.preventDefault();
-            loadTrendData();
-        }
+        (function(){
+            const trendForm = document.getElementById('trendFilterForm');
+            if (trendForm) {
+                trendForm.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    loadTrendData();
+                });
+            }
+        })();
         function systemHealth() {
             showNotification('Running system health check...', 'info');
             setTimeout(() => {
@@ -843,10 +882,15 @@ function loadTrendData() {
             });
         });
 }
-document.getElementById('trendFilterForm').onsubmit = function(e) {
-    e.preventDefault();
-    loadTrendData();
-};
+(function(){
+    const trendForm = document.getElementById('trendFilterForm');
+    if (trendForm) {
+        trendForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            loadTrendData();
+        });
+    }
+})();
 </script>
 </body>
 </html>
