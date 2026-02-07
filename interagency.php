@@ -220,59 +220,18 @@ require_login('interagency.php');
                             <button class="btn-control" onclick="toggleChannel('logistics')" id="channel-logistics">
                                 Logistics
                             </button>
+                            <select id="chat-filter-dept" class="agency-select" style="margin-left:0.5rem;">
+                                <option value="all">All Departments</option>
+                                <option value="police">Police</option>
+                                <option value="fire">Fire</option>
+                                <option value="medical">EMS</option>
+                                <option value="coordinator">Coordinator</option>
+                            </select>
                         </div>
                     </div>
 
                     <div class="chat-container">
-                        <div class="chat-messages" id="chat-messages">
-                            <div class="message-group">
-                                <div class="message police">
-                                    <div class="message-header">
-                                        <span class="agency-tag police">Police</span>
-                                        <span class="timestamp">Now</span>
-                                    </div>
-                                    <div class="message-content">
-                                        Multiple vehicle accident on Highway. Requesting fire department assistance for extrication.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="message-group">
-                                <div class="message fire">
-                                    <div class="message-header">
-                                        <span class="agency-tag fire">Fire</span>
-                                        <span class="timestamp">Now</span>
-                                    </div>
-                                    <div class="message-content">
-                                        Fire Department responding. ETA . Medical units standing by.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="message-group">
-                                <div class="message medical">
-                                    <div class="message-header">
-                                        <span class="agency-tag medical">EMS</span>
-                                        <span class="timestamp">Now</span>
-                                    </div>
-                                    <div class="message-content">
-                                        Trauma team activated. Preparing for multiple casualties. Requesting helicopter if needed.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="message-group">
-                                <div class="message system">
-                                    <div class="message-header">
-                                        <span class="agency-tag system">System</span>
-                                        <span class="timestamp">Now</span>
-                                    </div>
-                                    <div class="message-content">
-                                        <i class="fas fa-info-circle"></i> Incident  escalated to Level . All agencies notified.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="chat-messages" id="chat-messages"></div>
 
                         <div class="chat-input">
                             <div class="input-group">
@@ -304,7 +263,12 @@ require_login('interagency.php');
 ================================ */
 const state = {
     agenciesOnline: 3,
-    sharedIncidents: 3
+        sharedIncidents: 3,
+        chat: {
+            dept: 'all',
+            lastId: 0,
+            polling: null
+        }
 };
 
 updateOverview();
@@ -320,6 +284,76 @@ function updateOverview() {
 /* ================================
    CHAT SYSTEM
 ================================ */
+const DEPT_LABELS = { police: 'Police', fire: 'Fire', medical: 'EMS', coordinator: 'Coordinator' };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const filter = document.getElementById('chat-filter-dept');
+    if (filter) {
+        filter.addEventListener('change', () => {
+            state.chat.dept = filter.value || 'all';
+            document.getElementById('chat-messages').innerHTML = '';
+            state.chat.lastId = 0; // reset to force full load
+            loadChat(true);
+        });
+    }
+    // Initial load + start polling
+    loadChat(true);
+    if (state.chat.polling) clearInterval(state.chat.polling);
+    state.chat.polling = setInterval(() => loadChat(false), 5000);
+});
+
+function renderMessage(item) {
+    const time = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const agency = item.department;
+    const container = document.createElement('div');
+    container.className = 'message-group';
+    container.innerHTML = `
+        <div class="message ${agency}">
+            <div class="message-header">
+                <span class="agency-tag ${agency}">${(DEPT_LABELS[agency] || agency).toUpperCase()}</span>
+                <span class="timestamp">${time}</span>
+            </div>
+            <div class="message-content">${escapeHtml(item.text)}</div>
+        </div>`;
+    return container;
+}
+
+function loadChat(initial) {
+    const params = new URLSearchParams();
+    params.set('department', state.chat.dept);
+    if (state.chat.lastId > 0) params.set('since_id', String(state.chat.lastId));
+    fetch('api/interagency_chat_feed.php?' + params.toString())
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const items = res.items || [];
+            if (!items.length) {
+                if (initial && !document.getElementById('chat-messages').children.length) {
+                    document.getElementById('chat-messages').innerHTML = '<div class="message-group"><div class="message system"><div class="message-header"><span class="agency-tag system">System</span><span class="timestamp">Now</span></div><div class="message-content">No messages yet.</div></div></div>';
+                }
+                return;
+            }
+            // If initial and we got latest in DESC, reverse to chronological
+            const isInitialSince = state.chat.lastId === 0;
+            const list = isInitialSince ? items.reverse() : items; // initial returns DESC
+            const container = document.getElementById('chat-messages');
+            let newCount = 0;
+            list.forEach(item => {
+                if (item.id > state.chat.lastId) {
+                    state.chat.lastId = item.id;
+                    newCount++;
+                }
+                container.appendChild(renderMessage(item));
+            });
+            if (!isInitialSince && newCount > 0) {
+                const deptText = state.chat.dept === 'all' ? 'Interagency' : (DEPT_LABELS[state.chat.dept] || state.chat.dept);
+                showNotification(`${deptText}: New chat message`, 'info');
+            }
+            container.scrollTop = container.scrollHeight;
+        })
+        .catch(() => {});
+}
+
 function sendMessage() {
     const agency = document.getElementById('message-agency').value;
     const input = document.getElementById('message-input');
@@ -342,10 +376,19 @@ function sendMessage() {
 
     document.getElementById('chat-messages').appendChild(msg);
     input.value = '';
-    // Only show notification if message is not empty
-    if (text && text.trim() !== '') {
-        showNotification('Message sent', 'success');
-    }
+    // Persist to activity_log as agency_chat
+    try {
+        fetch('api/activity_event.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'chat', entity_type: 'agency_chat', entity_id: deptToEntityId(agency), details: text })
+        }).then(() => {
+            // Force reload to ensure we pick up server-stamped message with id
+            loadChat(false);
+        }).catch(() => {});
+    } catch (e) {}
+    // Notify locally
+    showNotification('Message sent', 'success');
 }
 
 /* ================================
@@ -505,6 +548,19 @@ function showNotification(message, type) {
     note.style.color = '#fff';
     document.body.appendChild(note);
     setTimeout(() => note.remove(), 3500);
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'})[c] || c);
+}
+function deptToEntityId(dept) {
+    switch (String(dept).toLowerCase()) {
+        case 'police': return 1;
+        case 'fire': return 2;
+        case 'medical': return 3;
+        case 'coordinator': return 4;
+        default: return null;
+    }
 }
 </script>
 

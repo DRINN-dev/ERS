@@ -85,6 +85,9 @@ $pageTitle = 'GPS Tracking System';
                             <button class="map-btn" onclick="toggleLayer('routes', this)">
                                 <i class="fas fa-route"></i> Routes
                             </button>
+                            <button class="map-btn" onclick="toggleHeatmap(this)">
+                                <i class="fas fa-fire-alt"></i> Heatmap
+                            </button>
                             
                             <button class="map-btn" onclick="centerMap()">
                                 <i class="fas fa-crosshairs"></i> Center
@@ -127,6 +130,8 @@ let qcBoundaryLayers = { halo: null, line: null };
 let routes = {};
 let QC_BOUNDS_GLOBAL;
 let unitFilter = '';
+let heatLayer = null;
+let heatActive = false;
 
 // ===============================
 // LEAFLET MAP INITIALIZATION
@@ -213,12 +218,16 @@ function getIcon(type) {
     });
 }
 
-function addUnitMarker(id, lat, lng, label, type) {
+function addUnitMarker(id, lat, lng, label, type, speedKph) {
     const marker = L.marker([lat, lng], { icon: getIcon(type) })
         .addTo(map)
-        .bindPopup(`<strong>${label}</strong><br>Status: ${type === 'incident' ? 'Incident' : 'Active'}`);
+        .bindPopup(`
+            <strong>${label}</strong><br>
+            ${typeof speedKph === 'number' && isFinite(speedKph) ? `Speed: ${speedKph.toFixed(1)} km/h<br>` : ''}
+            Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}
+        `);
 
-    markers[id] = { marker, type: "unit", unitType: (type || '').toLowerCase() };
+    markers[id] = { marker, type: "unit", unitType: (type || '').toLowerCase(), speedKph: speedKph };
 }
 
 function addIncidentMarker(id, lat, lng, label) {
@@ -314,6 +323,9 @@ function refreshMap() {
         const newLng = pos.lng + (Math.random() - 0.5) * 0.001;
         item.marker.setLatLng([newLat, newLng]);
     });
+    if (heatActive) {
+        loadHeatmap();
+    }
 }
 
 function selectRoute(routeId) {
@@ -374,6 +386,7 @@ function addLegendControl() {
             <div style="display:flex;align-items:center;margin-bottom:4px"><img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" width="14" height="14" style="margin-right:6px">Police</div>
             <div style="display:flex;align-items:center;margin-bottom:4px"><img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" width="14" height="14" style="margin-right:6px">Fire</div>
             <div style="display:flex;align-items:center"><img src="https://maps.google.com/mapfiles/ms/icons/yellow-dot.png" width="14" height="14" style="margin-right:6px">Incident</div>
+            <div style="margin-top:6px;font-size:11px;color:#666">Heatmap shows recent hotspots</div>
         `;
         return div;
     };
@@ -407,10 +420,20 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification(unitFilter ? `Showing ${unitFilter} units` : 'Showing all units', 'info');
     });
 });
+// Auto-reload heatmap when time range changes
+document.addEventListener('DOMContentLoaded', () => {
+    const tr = document.getElementById('time-range');
+    if (tr) {
+        tr.addEventListener('change', () => {
+            if (heatActive) loadHeatmap(true);
+        });
+    }
+});
 </script>
 
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script src="js/routing.js"></script>
 <script src="js/place-autocomplete.js"></script>
@@ -444,6 +467,7 @@ function loadDispatchedUnits() {
             const items = res.items || [];
             renderUnitCards(items);
             syncUnitMarkers(items);
+            startLivePolling();
         })
         .catch(() => {});
 }
@@ -464,9 +488,14 @@ function renderUnitCards(items) {
         const title = (u.incident_title || u.incident_type || 'Dispatched Incident');
         const loc = (u.incident_location || 'Unknown location');
         let distanceLine = '';
+        let speedLine = '';
         if (u.latitude && u.longitude && u.incident_latitude && u.incident_longitude) {
             const dkm = haversine(parseFloat(u.latitude), parseFloat(u.longitude), parseFloat(u.incident_latitude), parseFloat(u.incident_longitude));
             if (!isNaN(dkm)) distanceLine = `<div><i class=\"fas fa-ruler\"></i> Distance: ${dkm.toFixed(2)} km</div>`;
+        }
+        if (u.speed_kph !== undefined && u.speed_kph !== null) {
+            const v = parseFloat(u.speed_kph);
+            if (!isNaN(v)) speedLine = `<div><i class=\"fas fa-tachometer-alt\"></i> Speed: ${v.toFixed(1)} km/h</div>`;
         }
         const card = document.createElement('div');
         card.className = `unit-card ${cls}`;
@@ -482,6 +511,7 @@ function renderUnitCards(items) {
                 <div><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(title)}</div>
                 <div><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc)}</div>
                 ${distanceLine}
+                ${speedLine}
             </div>
             <div class="unit-actions">
                 <button class="btn-unit" onclick="trackUnit('${escapeAttr(u.identifier)}')"><i class="fas fa-location-arrow"></i> Track</button>
@@ -498,10 +528,21 @@ function syncUnitMarkers(items) {
         const type = u.unit_type || 'other';
         const lat = parseFloat(u.latitude);
         const lng = parseFloat(u.longitude);
+        const speed = (u.speed_kph !== undefined && u.speed_kph !== null) ? parseFloat(u.speed_kph) : null;
         if (!isNaN(lat) && !isNaN(lng)) {
-            // Include status in popup label
             const label = `${id}`;
-            addUnitMarker(id, lat, lng, label, type);
+            if (markers[id]) {
+                markers[id].marker.setLatLng([lat, lng]);
+                const popupHtml = `
+                    <strong>${label}</strong><br>
+                    ${typeof speed === 'number' && isFinite(speed) ? `Speed: ${speed.toFixed(1)} km/h<br>` : ''}
+                    Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                `;
+                markers[id].marker.bindPopup(popupHtml);
+                markers[id].speedKph = speed;
+            } else {
+                addUnitMarker(id, lat, lng, label, type, speed);
+            }
         }
     });
 }
@@ -542,12 +583,73 @@ function loadAvailableUnits() {
                 const type = u.unit_type || 'other';
                 const lat = parseFloat(u.latitude);
                 const lng = parseFloat(u.longitude);
+                const speed = (u.speed_kph !== undefined && u.speed_kph !== null) ? parseFloat(u.speed_kph) : null;
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    addUnitMarker(id, lat, lng, `${id}`, type);
+                    addUnitMarker(id, lat, lng, `${id}`, type, speed);
                 }
             });
         })
         .catch(() => {});
+}
+
+// ===============================
+// HEATMAP
+// ===============================
+function toggleHeatmap(el) {
+    heatActive = !heatActive;
+    if (el) {
+        if (heatActive) el.classList.add('active'); else el.classList.remove('active');
+    }
+    if (heatActive) {
+        loadHeatmap(true);
+        showNotification('Heatmap enabled', 'info');
+    } else {
+        if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+        showNotification('Heatmap disabled', 'info');
+    }
+}
+
+function loadHeatmap(initial) {
+    const timeSel = document.getElementById('time-range');
+    const val = timeSel ? timeSel.value : 'live';
+    const params = new URLSearchParams({ type: 'accident' });
+    if (val === '1hour') {
+        params.set('hours', '1');
+    } else if (val === '24hours') {
+        params.set('days', '1');
+    } else if (val === '7days') {
+        params.set('days', '7');
+    } else {
+        // live tracking: use recent month window
+        params.set('days', '30');
+    }
+    fetch('api/incidents_heatmap.php?' + params.toString())
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const points = res.points || [];
+            if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+            if (!points.length) return;
+            heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 17, minOpacity: 0.4 });
+            heatLayer.addTo(map);
+        })
+        .catch(() => {});
+}
+
+// Live polling to update unit positions/speeds every 5s
+let livePollTimer = null;
+function startLivePolling() {
+    if (livePollTimer) return;
+    livePollTimer = setInterval(() => {
+        fetch('api/units_list.php?status=dispatched')
+            .then(r => r.json())
+            .then(res => {
+                if (!res.ok) return;
+                const items = res.items || [];
+                syncUnitMarkers(items);
+            })
+            .catch(() => {});
+    }, 5000);
 }
 </script>
 

@@ -329,7 +329,9 @@ try {
                     select.innerHTML = '<option value="">-- Select --</option>';
                     if (data.units && data.units.length) {
                         data.units.forEach(u => {
-                            select.innerHTML += `<option value="${u.id}" data-type="${u.unit_type}" data-identifier="${u.identifier}">${u.identifier} (${u.unit_type})</option>`;
+                            const dist = (typeof u.distance_km === 'number' && isFinite(u.distance_km)) ? `${u.distance_km.toFixed(1)} km` : '';
+                            const suffix = dist ? `${u.unit_type}, ${dist}` : `${u.unit_type}`;
+                            select.innerHTML += `<option value="${u.id}" data-type="${u.unit_type}" data-identifier="${u.identifier}">${u.identifier} (${suffix})</option>`;
                         });
                     } else {
                         // If no real units, show sample units in dropdown

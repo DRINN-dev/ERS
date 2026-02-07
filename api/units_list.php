@@ -23,7 +23,25 @@ if ($status === 'dispatched') {
 
 $sql = 'SELECT u.id, u.identifier, u.unit_type, u.status, u.latitude, u.longitude, u.current_incident_id,
                i.reference_no AS incident_code, i.title AS incident_title, i.type AS incident_type,
-               i.location_address AS incident_location, i.latitude AS incident_latitude, i.longitude AS incident_longitude
+               i.location_address AS incident_location, i.latitude AS incident_latitude, i.longitude AS incident_longitude,
+               (
+                   SELECT ul.speed_kph FROM unit_locations ul
+                   WHERE ul.unit_id = u.id
+                   ORDER BY ul.recorded_at DESC
+                   LIMIT 1
+               ) AS speed_kph,
+               (
+                   SELECT ul.heading_deg FROM unit_locations ul
+                   WHERE ul.unit_id = u.id
+                   ORDER BY ul.recorded_at DESC
+                   LIMIT 1
+               ) AS heading_deg,
+               (
+                   SELECT ul.recorded_at FROM unit_locations ul
+                   WHERE ul.unit_id = u.id
+                   ORDER BY ul.recorded_at DESC
+                   LIMIT 1
+               ) AS last_recorded_at
         FROM units u
         LEFT JOIN incidents i ON i.id = u.current_incident_id';
 $params = [];
