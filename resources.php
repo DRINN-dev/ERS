@@ -301,7 +301,7 @@ try {
                     let rowClass = r.type === 'vehicles' ? 'resource-row-vehicle' : (r.type === 'personnel' ? 'resource-row-personnel' : 'resource-row-equipment');
                     let statusClass = r.status === 'available' ? 'resource-status-available' : (r.status === 'inuse' ? 'resource-status-inuse' : 'resource-status-offline');
                     let statusLabel = r.status === 'available' ? 'Avail' : (r.status === 'inuse' ? 'Busy' : 'Offline');
-                    // Build actions and render first three inline
+                    // Build actions and render inline (up to 4)
                     const btns = [];
                     if (r.actions.includes('deploy')) btns.push(`<button class=\"resource-action-btn deploy\" title=\"Deploy\" aria-label=\"Deploy\" onclick=\"deployResource(this)\"><i class=\"fas fa-play\"></i></button>`);
                     if (r.actions.includes('track')) btns.push(`<button class=\"resource-action-btn track\" title=\"Track\" aria-label=\"Track\" onclick=\"trackResource(this)\"><i class=\"fas fa-location-arrow\"></i></button>`);
@@ -312,14 +312,14 @@ try {
                     if (r.actions.includes('assign')) btns.push(`<button class=\"resource-action-btn assign\" title=\"Assign\" aria-label=\"Assign\" onclick=\"assignEquipment(this)\"><i class=\"fas fa-link\"></i></button>`);
                     if (r.actions.includes('check')) btns.push(`<button class=\"resource-action-btn check\" title=\"Check\" aria-label=\"Check\" onclick=\"checkEquipment(this)\"><i class=\"fas fa-check-circle\"></i></button>`);
                     if (r.actions.includes('calibrate')) btns.push(`<button class=\"resource-action-btn calibrate\" title=\"Calibrate\" aria-label=\"Calibrate\" onclick=\"calibrateEquipment(this)\"><i class=\"fas fa-tools\"></i></button>`);
-                    const visibleBtns = btns.slice(0, 3);
+                    const visibleBtns = btns.slice(0, Math.min(btns.length, 4));
                     const actionsHtml = `<div class=\"actions-inline\">${visibleBtns.join('')}</div>`;
                     // Icon by type
                     let iconHtml = '';
                     if (r.type === 'vehicles') iconHtml = '<i class="fas fa-truck-medical" style="color:#dc3545;"></i>';
                     else if (r.type === 'personnel') iconHtml = '<i class="fas fa-user" style="color:#28a745;"></i>';
                     else iconHtml = '<i class="fas fa-toolbox" style="color:#e83e8c;"></i>';
-                    return `<tr class=\"${rowClass}\" data-type=\"${r.type}\" data-status=\"${r.status}\" data-location=\"${r.location || ''}\">\n`+
+                    return `<tr class=\"${rowClass}\" data-type=\"${r.type}\" data-status=\"${r.status}\" data-location=\"${r.location || ''}\" data-resource-id=\"${r.id}\">\n`+
                         `<td>${iconHtml} ${r.type.charAt(0).toUpperCase() + r.type.slice(1)}</td>`+
                         `<td class=\"resource-title\">${r.name}${r.role ? ' <br><span style=\\"font-size:0.95em;color:#888;\\">'+r.role+'</span>' : ''}</td>`+
                         `<td><span class=\"${statusClass}\">${statusLabel}</span></td>`+
@@ -754,84 +754,51 @@ try {
 
         // Resource deployment functionality
         function deployResource(button) {
-            const resourceCard = button.closest('.resource-card');
-            const resourceName = resourceCard.querySelector('.resource-title').textContent;
-            const resourceId = resourceCard.dataset.resourceId || null;
-
-            if (confirm(`Deploy ${resourceName} to emergency response?`)) {
-                // In production, this would update the database
-                if (resourceId) {
-                    fetch('api/deploy_resource.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ resource_id: resourceId, action: 'deploy' })
-                    }).then(response => response.json())
-                      .then(data => {
-                          if (data.success) {
-                              resourceCard.classList.remove('available', 'inuse', 'offline');
-                              resourceCard.classList.add('inuse');
-                              resourceCard.dataset.status = 'inuse';
-
-                              const statusBadge = resourceCard.querySelector('.resource-status');
-                              statusBadge.className = 'resource-status status-inuse';
-                              statusBadge.textContent = 'In Use';
-
-                              button.classList.add('active');
-                              showNotification(`${resourceName} deployed successfully`, 'success');
-                          } else {
-                              showNotification('Failed to deploy resource: ' + (data.error || 'Unknown error'), 'error');
-                          }
-                      }).catch(error => {
-                          console.error('Error:', error);
-                          // Fallback to UI update only
-                          resourceCard.classList.remove('available', 'inuse', 'offline');
-                          resourceCard.classList.add('inuse');
-                          resourceCard.dataset.status = 'inuse';
-                          const statusBadge = resourceCard.querySelector('.resource-status');
-                          statusBadge.className = 'resource-status status-inuse';
-                          statusBadge.textContent = 'In Use';
-                          button.classList.add('active');
-                          showNotification(`${resourceName} deployed successfully`, 'success');
-                      });
-                } else {
-                    // Fallback for demo
-                    resourceCard.classList.remove('available', 'inuse', 'offline');
-                    resourceCard.classList.add('inuse');
-                    resourceCard.dataset.status = 'inuse';
-                    const statusBadge = resourceCard.querySelector('.resource-status');
-                    statusBadge.className = 'resource-status status-inuse';
-                    statusBadge.textContent = 'In Use';
-                    button.classList.add('active');
+            const row = button.closest('tr');
+            if (!row) return;
+            const resourceName = row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Resource';
+            const resourceId = row.getAttribute('data-resource-id');
+            const resourceType = row.getAttribute('data-type');
+            if (!resourceId) { showNotification('Missing resource id', 'error'); return; }
+            if (!confirm(`Deploy ${resourceName} to emergency response?`)) return;
+            fetch('api/deploy_resource.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: Number(resourceId), type: resourceType || '', action: 'deploy' })
+            }).then(r => r.json())
+            .then(data => {
+                if (data && data.ok) {
                     showNotification(`${resourceName} deployed successfully`, 'success');
+                    loadResources();
+                } else {
+                    showNotification('Failed to deploy resource' + (data && data.error ? ': ' + data.error : ''), 'error');
                 }
-            }
+            }).catch(() => showNotification('Network error', 'error'));
         }
 
         // Resource tracking functionality
         function trackResource(button) {
-            const resourceCard = button.closest('.resource-card');
-            const resourceName = resourceCard.querySelector('.resource-title').textContent;
-            const resourceId = resourceCard.dataset.resourceId || null;
-
-            // In production, this would fetch GPS data and open a map
-            if (resourceId) {
-                fetch(`api/get_resource_location.php?id=${resourceId}`)
-                    .then(response => response.json())
+            const row = button.closest('tr');
+            if (!row) return;
+            const resourceName = row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Resource';
+            const resourceId = row.getAttribute('data-resource-id');
+            const resourceType = row.getAttribute('data-type');
+            if (!resourceId) { showNotification('Missing resource id', 'error'); return; }
+            if (resourceType === 'vehicles') {
+                fetch('api/get_resource_location.php?id=' + encodeURIComponent(resourceId))
+                    .then(r => r.json())
                     .then(data => {
-                        if (data.success && data.latitude && data.longitude) {
-                            // Open GPS page with resource location
-                            window.location.href = `gps.php?resource_id=${resourceId}&lat=${data.latitude}&lng=${data.longitude}`;
+                        if (data && data.ok && data.latitude && data.longitude) {
+                            window.location.href = 'gps.php?unit_id=' + encodeURIComponent(resourceId) + '&unit=' + encodeURIComponent(resourceName) + '&from_lat=' + encodeURIComponent(data.latitude) + '&from_lng=' + encodeURIComponent(data.longitude);
                         } else {
-                            showNotification(`Tracking ${resourceName}... Location data unavailable`, 'info');
+                            showNotification('Location data unavailable', 'info');
+                            window.location.href = 'gps.php?unit_id=' + encodeURIComponent(resourceId) + '&unit=' + encodeURIComponent(resourceName);
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showNotification(`Opening GPS tracking for ${resourceName}...`, 'info');
-                        window.location.href = 'gps.php';
+                    }).catch(() => {
+                        window.location.href = 'gps.php?unit_id=' + encodeURIComponent(resourceId) + '&unit=' + encodeURIComponent(resourceName);
                     });
             } else {
-                showNotification(`Opening GPS tracking for ${resourceName}...`, 'info');
+                showNotification(`Tracking ${resourceName}...`, 'info');
                 window.location.href = 'gps.php';
             }
         }
@@ -848,9 +815,10 @@ try {
 
         // Resource details functionality
         function resourceDetails(button) {
-            const resourceCard = button.closest('.resource-card');
-            const resourceName = resourceCard.querySelector('.resource-title').textContent;
-            const resourceType = resourceCard.dataset.type;
+            const row = button.closest('tr');
+            if (!row) return;
+            const resourceName = row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Resource';
+            const resourceType = row.getAttribute('data-type');
 
             let details = `Resource: ${resourceName}\nType: ${resourceType}\n\n`;
 
@@ -867,9 +835,8 @@ try {
 
         // Personnel management functions
         function assignPersonnel(button) {
-            const resourceCard = button.closest('.resource-card');
-            const personnelName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const personnelName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Personnel';
             const assignment = prompt(`Assign ${personnelName} to which incident/unit?`);
             if (assignment) {
                 button.classList.add('active');
@@ -878,26 +845,23 @@ try {
         }
 
         function contactPersonnel(button) {
-            const resourceCard = button.closest('.resource-card');
-            const personnelName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const personnelName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Personnel';
             if (confirm(`Call ${personnelName}?`)) {
                 showNotification(`Calling ${personnelName}...`, 'info');
             }
         }
 
         function personnelSchedule(button) {
-            const resourceCard = button.closest('.resource-card');
-            const personnelName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const personnelName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Personnel';
             alert(`${personnelName} Schedule:\n\n• Monday-Friday: Day Shift\n• Weekends: On-call rotation\n• Next shift: Tomorrow\n• Vacation: Pending`);
         }
 
         // Equipment management functions
         function assignEquipment(button) {
-            const resourceCard = button.closest('.resource-card');
-            const equipmentName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const equipmentName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Equipment';
             const assignment = prompt(`Assign ${equipmentName} to which unit/personnel?`);
             if (assignment) {
                 showNotification(`${equipmentName} assigned to ${assignment}`, 'success');
@@ -905,16 +869,14 @@ try {
         }
 
         function checkEquipment(button) {
-            const resourceCard = button.closest('.resource-card');
-            const equipmentName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const equipmentName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Equipment';
             showNotification(`${equipmentName} status check: All systems operational`, 'success');
         }
 
         function calibrateEquipment(button) {
-            const resourceCard = button.closest('.resource-card');
-            const equipmentName = resourceCard.querySelector('.resource-title').textContent;
-
+            const row = button.closest('tr');
+            const equipmentName = row && row.querySelector('.resource-title') ? row.querySelector('.resource-title').textContent : 'Equipment';
             if (confirm(`Calibrate ${equipmentName}? This may take several minutes.`)) {
                 showNotification(`Calibration started for ${equipmentName}`, 'info');
             }
