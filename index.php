@@ -405,6 +405,106 @@ try {
                 });
             }
         });
+
+        // Dashboard: Recent Activity and Active Alerts
+        function escapeHtml(str){
+            return String(str || '')
+                .replace(/&/g,'&amp;')
+                .replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;')
+                .replace(/'/g,'&#039;');
+        }
+
+        function formatTime(ts){
+            try {
+                const d = new Date(ts);
+                if (!isNaN(d.getTime())) return d.toLocaleString();
+            } catch(e){}
+            return String(ts || '');
+        }
+
+        function timeAgo(ts){
+            try {
+                const d = new Date(ts);
+                const now = new Date();
+                const diff = Math.max(0, (now - d) / 1000);
+                if (diff < 60) return `${Math.floor(diff)}s ago`;
+                if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+                if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+                return `${Math.floor(diff/86400)}d ago`;
+            } catch(e){ return String(ts || ''); }
+        }
+
+        async function loadActivityFeed(){
+            const container = document.getElementById('activity-feed-list');
+            if (!container) return;
+            try {
+                const r = await fetch('api/activity_feed.php');
+                const j = await r.json();
+                if (!j || !j.ok || !Array.isArray(j.data)) throw new Error('Invalid feed');
+                if (!j.data.length){
+                    container.innerHTML = '<div class="activity-item"><div class="activity-content" style="color:#777;">No recent activity.</div></div>';
+                    return;
+                }
+                const items = j.data.map(it => {
+                    const user = escapeHtml(it.username || ('User #' + (it.user_id || '')));
+                    const action = escapeHtml(it.action || 'Activity');
+                    const entity = escapeHtml(it.entity_type || 'system');
+                    const details = escapeHtml(it.details || '');
+                    const when = timeAgo(it.created_at || '');
+                    return `<div class=\"activity-item\"><div class=\"activity-content\"><strong>${action}</strong> <span style=\"color:#666;\">(${entity})</span>${details?': '+details:''}<br><span style=\"color:#888;\">by ${user} • ${when}</span></div></div>`;
+                });
+                container.innerHTML = items.join('');
+            } catch(e){
+                container.innerHTML = '<div class="activity-item"><div class="activity-content" style="color:#b91c1c;">Failed to load activity.</div></div>';
+            }
+        }
+
+        async function loadAlertsPanel(){
+            const container = document.getElementById('alerts-panel-list');
+            if (!container) return;
+            try {
+                const condition = <?php echo json_encode($condition ?? null); ?>;
+                const url = 'api/alerts_active.php' + (condition? ('?condition=' + encodeURIComponent(condition)) : '');
+                const r = await fetch(url);
+                const j = await r.json();
+                if (!j || !j.ok || !Array.isArray(j.data)) throw new Error('Invalid alerts');
+                if (!j.data.length){
+                    container.innerHTML = '<div class="alert-item info"><div class="alert-content" style="color:#777;">No active alerts.</div></div>';
+                    return;
+                }
+                const items = j.data.map(a => {
+                    const type = (a.type || 'info').toLowerCase();
+                    const title = escapeHtml(a.title || 'Alert');
+                    const details = escapeHtml(a.details || '');
+                    const badgeColor = type==='critical' ? '#dc2626' : (type==='warning' ? '#f59e0b' : '#2563eb');
+                    const badge = `<span style=\"display:inline-block;margin-right:8px;padding:2px 6px;border-radius:10px;background:${badgeColor};color:#fff;font-size:11px;font-weight:700;\">${type.toUpperCase()}</span>`;
+                    return `<div class=\"alert-item ${type}\"><div class=\"alert-content\">${badge}<strong>${title}</strong>${details?': '+details:''}</div></div>`;
+                });
+                container.innerHTML = items.join('');
+            } catch(e){
+                container.innerHTML = '<div class="alert-item error"><div class="alert-content" style="color:#b91c1c;">Failed to load alerts.</div></div>';
+            }
+        }
+
+        function viewAllActivity(){
+            window.open('api/activity_feed.php?all=1', '_blank');
+        }
+
+        function viewAllAlerts(){
+            const condition = <?php echo json_encode($condition ?? null); ?>;
+            const url = 'api/alerts_active.php?all=1' + (condition? ('&condition=' + encodeURIComponent(condition)) : '');
+            window.open(url, '_blank');
+        }
+
+        // Initial load + auto-refresh every 15s
+        document.addEventListener('DOMContentLoaded', () => {
+            loadActivityFeed();
+            loadAlertsPanel();
+            setInterval(loadActivityFeed, 15000);
+            setInterval(loadAlertsPanel, 15000);
+        });
         // Emergency Response System Dashboard Functionality
         // Dashboard action functions
         function refreshDashboard() {

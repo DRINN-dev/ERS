@@ -38,7 +38,7 @@ if ($all) {
 }
 
 // Resource utilization (list all units if ?all=1, else just summary)
-$amb = $pdo->query("SELECT id, unit_name, status FROM units WHERE unit_type='ambulance'")->fetchAll(PDO::FETCH_ASSOC);
+$amb = $pdo->query("SELECT id, identifier AS unit_name, status FROM units WHERE unit_type='ambulance'")->fetchAll(PDO::FETCH_ASSOC);
 $total = count($amb);
 $used = array_filter($amb, function($u){ return $u['status'] !== 'available'; });
 if ($total > 0 && count($used) / $total > 0.8) {

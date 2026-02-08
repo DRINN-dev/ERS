@@ -11,5 +11,5 @@ if (!$pdo) {
 }
 $limit = isset($_GET['all']) ? 200 : 20;
 // Get recent activity log
-$activity = $pdo->query("SELECT a.*, u.username FROM activity_log a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.created_at DESC LIMIT $limit")->fetchAll(PDO::FETCH_ASSOC);
+$activity = $pdo->query("SELECT a.*, u.name AS username FROM activity_log a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.created_at DESC LIMIT $limit")->fetchAll(PDO::FETCH_ASSOC);
 echo json_encode(['ok' => true, 'data' => $activity]);
