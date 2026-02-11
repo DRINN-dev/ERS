@@ -8,6 +8,9 @@
 <!-- Admin Footer Component -->
  
 <footer class="admin-footer">
+
+<!-- Screen Timeout Overlay -->
+<script src="js/screen-timeout.js"></script>
     <div class="footer-bottom">
 
         <div class="footer-copyright">

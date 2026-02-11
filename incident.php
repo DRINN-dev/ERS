@@ -172,7 +172,7 @@ $pageTitle = 'Incident Priority Management';
     </div>
 
     <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+    <?php include('includes/admin-footer.php'); ?>
 
     <script>
         // Incident Priority Management Functionality

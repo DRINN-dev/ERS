@@ -90,10 +90,7 @@ try {
 
             <!-- Quick Actions -->
             <div class="quick-actions">
-                <button class="quick-action-btn" onclick="requestResource()">
-                    <i class="fas fa-plus-circle"></i>
-                    Request Resource
-                </button>
+                <!-- Removed Request Resource button: Only responders can send requests, admin receives -->
                 <button class="quick-action-btn" onclick="emergencyAllocation()">
                     <i class="fas fa-exclamation-triangle"></i>
                     Emergency Allocation
@@ -501,108 +498,7 @@ try {
     </div>
 
     <!-- Request Resource Modal -->
-    <div class="resource-request-modal" id="resourceRequestModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Request Resource</h3>
-                <button class="modal-close" onclick="closeResourceModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="resourceRequestForm" onsubmit="submitResourceRequest(event)">
-                    <div class="form-group">
-                        <input type="hidden" name="requestor" value="<?php echo htmlspecialchars($requestor_name); ?>">
-                        <label for="request-resource-type">Resource Type <span class="required">*</span></label>
-                        <select id="request-resource-type" name="resource_type" required onchange="updateResourceFormFields()">
-                            <option value="">Select Resource Type</option>
-                            <option value="vehicle">Vehicle</option>
-                            <option value="personnel">Personnel</option>
-                            <option value="equipment">Equipment</option>
-                            <option value="facility">Facility</option>
-                        </select>
-                    </div>
-                    <!-- Common Fields -->
-                    <div id="vehicle-fields">
-                        <div class="form-group">
-                            <label for="request-resource-name">Resource Name/Description <span class="required">*</span></label>
-                            <select id="request-resource-name" name="resource_name" required>
-                                <option value="">Select Resource</option>
-                                <option value="Fire Truck">Fire Truck</option>
-                                <option value="Ambulance">Ambulance</option>
-                                <option value="Police">Police</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="request-quantity">Quantity <span class="required">*</span></label>
-                            <input type="number" id="request-quantity" name="quantity" min="1" value="1" required>
-                        </div>
-                    </div>
-                    <div id="personnel-fields" style="display:none;">
-                        <div class="form-group">
-                            <label for="personnel-name">Name <span class="required">*</span></label>
-                            <input type="text" id="personnel-name" name="personnel_name" placeholder="e.g., Juan Dela Cruz" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="personnel-role">Personnel Role <span class="required">*</span></label>
-                            <input type="text" id="personnel-role" name="personnel_role" placeholder="e.g., Paramedic, Police Officer">
-                        </div>
-                        <div class="form-group">
-                            <label for="personnel-shift">Shift</label>
-                            <input type="text" id="personnel-shift" name="personnel_shift" placeholder="e.g., Day, Night, On-call">
-                        </div>
-                        <div class="form-group">
-                            <label for="personnel-quantity">Quantity <span class="required">*</span></label>
-                            <input type="number" id="personnel-quantity" name="quantity" min="1" value="1">
-                        </div>
-                    </div>
-                    <div id="equipment-fields" style="display:none;">
-                        <div class="form-group">
-                            <label for="equipment-type">Equipment Type <span class="required">*</span></label>
-                            <input type="text" id="equipment-type" name="equipment_type" placeholder="e.g., Defibrillator, Radio">
-                        </div>
-                        <div class="form-group">
-                            <label for="equipment-condition">Condition</label>
-                            <input type="text" id="equipment-condition" name="equipment_condition" placeholder="e.g., New, Calibrated, Needs Repair">
-                        </div>
-                        <div class="form-group">
-                            <label for="equipment-quantity">Quantity <span class="required">*</span></label>
-                            <input type="number" id="equipment-quantity" name="quantity" min="1" value="1">
-                        </div>
-                    </div>
-                    <!-- Shared Fields -->
-                    <div class="form-group">
-                        <label for="request-priority">Priority <span class="required">*</span></label>
-                        <select id="request-priority" name="priority" required>
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="request-location">Location/Station</label>
-                        <input type="text" id="request-location" name="location" placeholder="e.g., Station 1, Downtown">
-                    </div>
-                    <div class="form-group">
-                        <label for="request-notes">Additional Notes</label>
-                        <textarea id="request-notes" name="notes" rows="3" placeholder="Any additional information or special requirements..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="request-urgency">Urgency</label>
-                        <select id="request-urgency" name="urgency">
-                            <option value="normal">Normal</option>
-                            <option value="urgent">Urgent</option>
-                            <option value="emergency">Emergency</option>
-                        </select>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-cancel" onclick="closeResourceModal()">Cancel</button>
-                        <button type="submit" class="btn-submit">Submit Request</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <!-- Removed Request Resource Modal: Only responders can send requests, admin receives -->
 
     <!-- Request Notes Modal -->
     <div class="resource-request-modal" id="requestNotesModal">

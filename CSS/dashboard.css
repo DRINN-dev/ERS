@@ -1,3 +1,9 @@
+/* Scrollable Activity Feed */
+.scrollable-feed {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
 
 .dashboard-header {
     display: flex;

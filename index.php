@@ -286,7 +286,7 @@ try {
                             <i class="fas fa-external-link-alt"></i> View All
                         </button>
                     </div>
-                    <div id="activity-feed-list">
+                    <div id="activity-feed-list" class="scrollable-feed">
                         <div class="activity-item"><div class="activity-content">Loading...</div></div>
                     </div>
                 </div>
@@ -306,7 +306,7 @@ try {
         </div>
     </div>
     <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+    <?php include('includes/admin-footer.php'); ?>
 
     <script>
         // Lightweight notification helper used across dashboard

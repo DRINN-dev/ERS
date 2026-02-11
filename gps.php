@@ -117,7 +117,7 @@ $pageTitle = 'GPS Tracking System';
     </div>
 
     <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+    <?php include('includes/admin-footer.php'); ?>
 
     <!-- ============================================
          COMPLETE FUNCTIONAL GPS TRACKING SYSTEM
@@ -171,6 +171,30 @@ function initMap() {
     // Load units from API and render
     loadDispatchedUnits();
     loadAvailableUnits();
+
+    // Load incidents and add warning markers
+    loadIncidentMarkers();
+// Load incidents from API and add warning markers
+function loadIncidentMarkers() {
+    fetch('api/incidents_list.php?status=active')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) return;
+            const items = res.items || [];
+            items.forEach(inc => {
+                // If incident has coordinates, add marker
+                if (inc.latitude && inc.longitude) {
+                    addIncidentMarker(
+                        'incident-' + inc.id,
+                        parseFloat(inc.latitude),
+                        parseFloat(inc.longitude),
+                        inc.title || inc.type || 'Incident'
+                    );
+                }
+            });
+        })
+        .catch(() => {});
+}
 
     initRoutes();
 

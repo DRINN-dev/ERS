@@ -255,7 +255,7 @@ require_login('interagency.php');
     </div>
 
     <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+    <?php include('includes/admin-footer.php'); ?>
 
     <script>
 /* ================================

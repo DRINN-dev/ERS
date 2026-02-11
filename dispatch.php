@@ -468,6 +468,7 @@ try {
                             ]).then(([incRes, unitRes]) => {
                                 const inc = incRes.incident || {};
                                 const u = unitRes.unit || {};
+                                // Fallbacks for incident location
                                 let toLat = null, toLng = null;
                                 if (inc.latitude && inc.longitude) {
                                     toLat = Number(inc.latitude);
@@ -476,23 +477,28 @@ try {
                                     const parts = inc.location_address.split(',').map(Number);
                                     toLat = parts[0];
                                     toLng = parts[1];
+                                } else {
+                                    // Default fallback: QC Hall
+                                    toLat = 14.6760;
+                                    toLng = 121.0437;
                                 }
+                                // Fallbacks for unit location
                                 let fromLat = null, fromLng = null;
                                 if (u.latitude && u.longitude) {
                                     fromLat = Number(u.latitude);
                                     fromLng = Number(u.longitude);
                                 } else {
-                                    // Fallback and persist station coordinates based on unit type
                                     const type = selectedOption ? selectedOption.getAttribute('data-type') : (u.unit_type || 'other');
                                     if (type === 'police') { fromLat = 14.6500; fromLng = 121.0300; }
                                     else if (type === 'fire') { fromLat = 14.6700; fromLng = 121.0450; }
                                     else if (type === 'ambulance') { fromLat = 14.6900; fromLng = 121.0600; }
                                     else { fromLat = 14.6760; fromLng = 121.0437; }
-                                    return fetch('api/unit_location_update.php', {
+                                    // Optionally update unit location in DB
+                                    fetch('api/unit_location_update.php', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ unit_id: unitId, latitude: fromLat, longitude: fromLng })
-                                    }).then(() => ({ inc, u, toLat, toLng, fromLat, fromLng }));
+                                    });
                                 }
                                 // Plot locally if possible
                                 if (typeof addRouteToIncident === 'function' && fromLat && fromLng && toLat && toLng) {
@@ -526,7 +532,7 @@ try {
         </script>
 
         <!-- Uncomment if already have content -->
-        <?php /* include('includes/admin-footer.php') */ ?>
+        <?php include('includes/admin-footer.php'); ?>
 
     <script>
 // Update unit status via AJAX

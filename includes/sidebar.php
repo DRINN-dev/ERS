@@ -108,6 +108,13 @@
             </div>
         </nav>
     </div>
+    <!-- Sidebar Footer with Account Settings -->
+    <div class="sidebar-footer">
+        <a href="account_settings.php" class="sidebar-link sidebar-footer-link">
+            <i class="fa-solid fa-user-cog"></i>
+            <span>Account Settings</span>
+        </a>
+    </div>
 </aside>
 
 <!-- Sidebar Overlay for mobile -->

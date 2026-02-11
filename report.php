@@ -510,7 +510,7 @@ try {
     </div>
 
     <!-- Uncomment if already have content -->
-    <?php /* include('includes/admin-footer.php') */ ?>
+    <?php include('includes/admin-footer.php'); ?>
 
     <script>
         // Emergency Response Analytics & Reporting Functionality
